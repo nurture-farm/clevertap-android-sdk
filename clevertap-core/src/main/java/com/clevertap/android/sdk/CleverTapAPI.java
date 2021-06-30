@@ -4301,7 +4301,9 @@ public class CleverTapAPI implements CleverTapAPIListener {
             JSONObject fieldsToUpdateLocally = new JSONObject();
 
             //adding here userId and deviceId here, and we assume userType is passed in the profile
-            profile.put(Constants.KEY_USER_ID, profile.get(Constants.KEY_IDENTIFIER));
+            if(profile.containsKey(Constants.KEY_IDENTIFIER)) {
+                profile.put(Constants.KEY_USER_ID, profile.get(Constants.KEY_IDENTIFIER));
+            }
             profile.put(Constants.KEY_DEVICE_ID, this.deviceInfo.getDeviceID());
 
             for (String key : profile.keySet()) {
