@@ -2875,13 +2875,19 @@ public class CleverTapAPI implements CleverTapAPIListener {
                 event.put(Constants.ERROR_KEY, getErrorObject(vr));
             }
 
-            //add userId,userType,deviceId in all events
-            eventActions.put(Constants.KEY_USER_ID,
-                    _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_ID));
-            eventActions.put(Constants.KEY_USER_TYPE,
-                    _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_TYPE));
-            eventActions.put(Constants.KEY_DEVICE_ID,
-                    _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_DEVICE_ID));
+            //add userId,userType,deviceId in all events if present
+            Object userId = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_ID);
+            if(null != userId) {
+                eventActions.put(Constants.KEY_USER_ID, userId);
+            }
+            Object userType = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_TYPE);
+            if(null != userType) {
+                eventActions.put(Constants.KEY_USER_TYPE, userType);
+            }
+            Object deviceId = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_DEVICE_ID);
+            if(null != deviceId) {
+                eventActions.put(Constants.KEY_DEVICE_ID, deviceId);
+            }
 
             eventName = vr.getObject().toString();
             JSONObject actions = new JSONObject();
