@@ -212,7 +212,10 @@ public interface Constants {
     // valid profile identifier keys
     Set<String> PROFILE_IDENTIFIER_KEYS = new HashSet<>(Arrays.asList(
             "Identity", "Email", "FBID", "GPID"));
-
+    String KEY_IDENTIFIER = "Identity";
+    String KEY_USER_TYPE = "userType";
+    String KEY_USER_ID = "userId";
+    String KEY_DEVICE_ID = "deviceId";
     String KEY_ICON = "icon";
     String KEY_POSTER_URL = "poster";
     String KEY_ACTION = "action";

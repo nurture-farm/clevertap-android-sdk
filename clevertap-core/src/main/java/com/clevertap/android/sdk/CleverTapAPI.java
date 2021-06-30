@@ -2875,6 +2875,14 @@ public class CleverTapAPI implements CleverTapAPIListener {
                 event.put(Constants.ERROR_KEY, getErrorObject(vr));
             }
 
+            //add userId,userType,deviceId in all events
+            eventActions.put(Constants.KEY_USER_ID,
+                    _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_ID));
+            eventActions.put(Constants.KEY_USER_TYPE,
+                    _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_TYPE));
+            eventActions.put(Constants.KEY_DEVICE_ID,
+                    _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_DEVICE_ID));
+
             eventName = vr.getObject().toString();
             JSONObject actions = new JSONObject();
             for (String key : eventActions.keySet()) {
@@ -4291,6 +4299,11 @@ public class CleverTapAPI implements CleverTapAPIListener {
             ValidationResult vr;
             JSONObject customProfile = new JSONObject();
             JSONObject fieldsToUpdateLocally = new JSONObject();
+
+            //adding here userId and deviceId here, and we assume userType is passed in the profile
+            profile.put(Constants.KEY_USER_ID, profile.get(Constants.KEY_IDENTIFIER));
+            profile.put(Constants.KEY_DEVICE_ID, this.deviceInfo.getDeviceID());
+
             for (String key : profile.keySet()) {
                 Object value = profile.get(key);
 
