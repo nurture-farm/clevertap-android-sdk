@@ -40,7 +40,7 @@ ext {
     materialVersion = '1.2.1'
 
     // install referrer
-    installreferrerVersion = '2.1'
+    installreferrerVersion = '2.2'
 
     // play services
     locationVersion = '17.0.0'
