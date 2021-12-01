@@ -3903,6 +3903,10 @@ public class CleverTapAPI implements CleverTapAPIListener {
         }
     }
 
+    public void resetUser() {
+        asyncProfileSwitchUser(null, null, getCleverTapID());
+    }
+
     private JSONArray _cleanMultiValues(ArrayList<String> values, String key) {
 
         try {
