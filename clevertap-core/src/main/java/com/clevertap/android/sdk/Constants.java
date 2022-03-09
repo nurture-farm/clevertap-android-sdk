@@ -1,20 +1,38 @@
 package com.clevertap.android.sdk;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
+import androidx.annotation.StringDef;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
-import java.util.Set;
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public interface Constants {
+
+    @Retention(RetentionPolicy.SOURCE)
+    @StringDef({TYPE_EMAIL, TYPE_PHONE, TYPE_IDENTITY})
+    @interface IdentityType {
+
+    }
+    String TAG_FEATURE_IN_APPS = "TAG_FEATURE_IN_APPS";
+    @NonNull
+    String TYPE_IDENTITY = "Identity";
+    @NonNull
+    String TYPE_EMAIL = "Email";
+    @NonNull
+    String TYPE_PHONE = "Phone";
+
 
     String LABEL_ACCOUNT_ID = "CLEVERTAP_ACCOUNT_ID";
     String LABEL_TOKEN = "CLEVERTAP_TOKEN";
     String LABEL_NOTIFICATION_ICON = "CLEVERTAP_NOTIFICATION_ICON";
     String LABEL_INAPP_EXCLUDE = "CLEVERTAP_INAPP_EXCLUDE";
     String LABEL_REGION = "CLEVERTAP_REGION";
+    String LABEL_PROXY_DOMAIN = "CLEVERTAP_PROXY_DOMAIN";
     String LABEL_DISABLE_APP_LAUNCH = "CLEVERTAP_DISABLE_APP_LAUNCHED";
     String LABEL_SSL_PINNING = "CLEVERTAP_SSL_PINNING";
     String LABEL_BACKGROUND_SYNC = "CLEVERTAP_BACKGROUND_SYNC";
@@ -33,7 +51,6 @@ public interface Constants {
     String DEVICE_ID_TAG = "deviceId";
     String FALLBACK_ID_TAG = "fallbackId";
     SimpleDateFormat FB_DOB_DATE_FORMAT = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
-    SimpleDateFormat GP_DOB_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
     int PAGE_EVENT = 1;
     int PING_EVENT = 2;
     int PROFILE_EVENT = 3;
@@ -120,7 +137,7 @@ public interface Constants {
     String[] SYSTEM_EVENTS = {NOTIFICATION_CLICKED_EVENT_NAME,
             NOTIFICATION_VIEWED_EVENT_NAME, GEOFENCE_ENTERED_EVENT_NAME,
             GEOFENCE_EXITED_EVENT_NAME};
-    long DEFAULT_PUSH_TTL = 1000 * 60 * 60 * 24 * 4;
+    long DEFAULT_PUSH_TTL = 1000L * 60 * 60 * 24 * 4;// 4 days
     String PF_JOB_ID = "pfjobid";
     int PING_FREQUENCY_VALUE = 240;
     String PING_FREQUENCY = "pf";
@@ -136,6 +153,7 @@ public interface Constants {
     String KEY_ACCOUNT_ID = "accountId";
     String KEY_ACCOUNT_TOKEN = "accountToken";
     String KEY_ACCOUNT_REGION = "accountRegion";
+    String KEY_PROXY_DOMAIN = "proxyDomain";
     String KEY_ANALYTICS_ONLY = "analyticsOnly";
     String KEY_DEFAULT_INSTANCE = "isDefaultInstance";
     String KEY_USE_GOOGLE_AD_ID = "useGoogleAdId";
@@ -171,10 +189,10 @@ public interface Constants {
     String KEY_ENABLE_CUSTOM_CT_ID = "getEnableCustomCleverTapId";
     String KEY_BETA = "beta";
     String KEY_PACKAGE_NAME = "packageName";
-    String KEY_ENABLE_UIEDITOR = "enableUIEditor";
-    String KEY_ENABLE_ABTEST = "enableABTesting";
     String KEY_ALLOWED_PUSH_TYPES = "allowedPushTypes";
+    String KEY_IDENTITY_TYPES = "identityTypes";
     String WZRK_PUSH_ID = "wzrk_pid";
+    String EXTRAS_FROM = "extras_from";
     String NOTIF_MSG = "nm";
     String NOTIF_TITLE = "nt";
     String NOTIF_ICON = "ico";
@@ -202,15 +220,12 @@ public interface Constants {
     String COMMAND_SET = "$set";
     String COMMAND_ADD = "$add";
     String COMMAND_REMOVE = "$remove";
-
     String COMMAND_DELETE = "$delete";
+    String COMMAND_INCREMENT = "$incr";
+    String COMMAND_DECREMENT = "$decr";
     String GUID_PREFIX_GOOGLE_AD_ID = "__g";
     String CUSTOM_CLEVERTAP_ID_PREFIX = "__h";
     String ERROR_PROFILE_PREFIX = "__i";
-    // valid profile identifier keys
-    Set<String> PROFILE_IDENTIFIER_KEYS = new HashSet<>(Arrays.asList(
-            "Identity", "Email", "FBID", "GPID"));
-
     String KEY_ICON = "icon";
     String KEY_POSTER_URL = "poster";
     String KEY_ACTION = "action";
@@ -233,14 +248,11 @@ public interface Constants {
     String KEY_LINKS = "links";
     String TEST_IDENTIFIER = "0_0";
     String FEATURE_DISPLAY_UNIT = "DisplayUnit : ";
-
     String FEATURE_FLAG_UNIT = "Feature Flag : ";
     String LOG_TAG_PRODUCT_CONFIG = "Product Config : ";
     int FETCH_TYPE_PC = 0;
     int FETCH_TYPE_FF = 1;
-
     String LOG_TAG_GEOFENCES = "Geofences : ";
-
     // error message codes
     int INVALID_MULTI_VALUE = 1;
     int PUSH_KEY_EMPTY = 2;
@@ -265,6 +277,22 @@ public interface Constants {
     int INVALID_CT_CUSTOM_ID = 21;
     int INVALID_MULTI_VALUE_KEY = 23;
     int RESTRICTED_MULTI_VALUE_KEY = 24;
+    int INVALID_INCREMENT_DECREMENT_VALUE = 25;
+    String CLEVERTAP_IDENTIFIER = "CLEVERTAP_IDENTIFIER";
+    String SEPARATOR_COMMA = ",";
+    String EMPTY_STRING = "";
+    String SP_KEY_PROFILE_IDENTITIES = "SP_KEY_PROFILE_IDENTITIES";
 
+    // valid profile identifier keys
+    HashSet<String> LEGACY_IDENTITY_KEYS = new HashSet<>(Arrays.asList(TYPE_IDENTITY, TYPE_EMAIL));
+    HashSet<String> ALL_IDENTITY_KEYS = new HashSet<>(Arrays.asList(TYPE_IDENTITY, TYPE_EMAIL, TYPE_PHONE));
+
+    int MAX_DELAY_FREQUENCY = 1000 * 60 * 10;
+
+    String[] NULL_STRING_ARRAY = new String[0];
+    String PT_NOTIF_ID = "notificationId";
+    String CLOSE_SYSTEM_DIALOGS = "close_system_dialogs";
+    String KEY_CT_TYPE = "ct_type";
+    String PT_INPUT_KEY = "pt_input_reply";
 
 }

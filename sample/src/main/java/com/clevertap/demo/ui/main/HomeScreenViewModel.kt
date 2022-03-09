@@ -1,10 +1,12 @@
 package com.clevertap.demo.ui.main
 
+import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.clevertap.android.sdk.CTInboxStyleConfig
 import com.clevertap.android.sdk.CleverTapAPI
+import java.util.ArrayList
 import java.util.Date
 
 class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel() {
@@ -18,7 +20,9 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
         val commandPosition = "$groupPosition$childPosition"
         clickCommand.value = commandPosition
         when (commandPosition) {
-            "00" -> cleverTapAPI?.pushEvent("testEvent")
+            "00" -> {
+                cleverTapAPI?.pushEvent("testEventPushAmp")
+            }
             "01" -> {
                 //Record an event with properties
                 val prodViewedAction = mapOf(
@@ -26,25 +30,29 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                     "Category" to "Mens Accessories", "Price" to 59.99, "Date" to Date()
                 )
                 cleverTapAPI?.pushEvent("Product viewed", prodViewedAction)
+                //cleverTapAPI?.pushEvent("video-inapp")
+                //cleverTapAPI?.pushEvent("video-inbox")
+                cleverTapAPI?.pushEvent("caurousel-inapp")
+                cleverTapAPI?.pushEvent("icon-inbox")
             }
             "02" -> {
                 //Record a Charged (Transactional) event
-                val chargeDetails = hashMapOf(
+                val chargeDetails = hashMapOf<String, Any>(
                     "Amount" to 300, "Payment Mode" to "Credit card",
                     "Charged ID" to 24052013
                 )
 
-                val item1 = hashMapOf(
+                val item1 = hashMapOf<String, Any>(
                     "Product category" to "books",
                     "Book name" to "The Millionaire next door", "Quantity" to 1
                 )
 
-                val item2 = hashMapOf(
+                val item2 = hashMapOf<String, Any>(
                     "Product category" to "books",
                     "Book name" to "Achieving inner zen", "Quantity" to 1
                 )
 
-                val item3 = hashMapOf(
+                val item3 = hashMapOf<String, Any>(
                     "Product category" to "books",
                     "Book name" to "Chuck it, let's do it", "Quantity" to 5
                 )
@@ -54,6 +62,7 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
 
                 cleverTapAPI?.pushChargedEvent(chargeDetails, items)
             }
+            "03" -> cleverTapAPI?.recordScreen("Cart Screen Viewed")
             "10" -> {
                 //Record a profile
                 val profileUpdate = HashMap<String, Any>()
@@ -114,14 +123,33 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                 cleverTapAPI?.removeMultiValuesForKey("MyStuffList", arrayListOf("Socks", "Scarf"))
             }
             "17" -> {
+                //Update(Add) Increment Value
+                cleverTapAPI?.incrementValue("score", 50)
+            }
+            "18" -> {
+                // Update(Add) Decrement Value
+                cleverTapAPI?.decrementValue("score", 30)
+            }
+            "19" -> {
                 // Profile location
                 cleverTapAPI?.location = cleverTapAPI?.location
             }
-            "18" -> {
+            "110" -> {
                 // Get Profile Info
                 println("Profile Name = ${cleverTapAPI?.getProperty("Name")}")
                 println("Profile CleverTapId = ${cleverTapAPI?.cleverTapID}")
                 println("Profile CleverTap AttributionIdentifier = ${cleverTapAPI?.cleverTapAttributionIdentifier}")
+            }
+            "111" -> {
+                // onUserLogin
+                val newProfile = HashMap<String, Any>()
+                var n = (0..10_000).random()
+                var p = (10_000..99_999).random()
+                newProfile["Name"] = "Don Joe $n}" // String
+                newProfile["Email"] = "donjoe$n@gmail.com" // Email address of the user
+                newProfile["Phone"] = "+141566$p" // Phone (with the country code, starting with +)
+                // add any other key value pairs.....
+                cleverTapAPI?.onUserLogin(newProfile)
             }
             "20" -> {
                 // Open Inbox
@@ -138,6 +166,7 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                     navBarTitle = "MY INBOX"
                     navBarColor = "#FFFFFF"
                     inboxBackgroundColor = "#00FF00"
+                    firstTabTitle = "First Tab"
                     cleverTapAPI?.showAppInbox(this) //Opens activity With Tabs
                 }
             }
@@ -234,7 +263,7 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                 } ?: println("DisplayUnit Id is null")
             }
             "40" -> {
-                val hashMap = hashMapOf(
+                val hashMap = hashMapOf<String, Any>(
                     "text color" to "red", "msg count" to 100, "price" to 100.50, "is shown" to true,
                     "json" to """{"key":"val","key2":50}"""
                 )
@@ -259,6 +288,34 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                     cleverTapAPI?.featureFlag()?.get("is shown", true)
                 }"
             )
+            "80" -> println("CleverTapAttribution Identifier = ${cleverTapAPI?.cleverTapAttributionIdentifier}")
+            "81" -> cleverTapAPI?.getCleverTapID {
+                println(
+                    "CleverTap DeviceID from Application class= $it, thread=${
+                        if (Looper.myLooper() == Looper.getMainLooper()) "mainthread" else "bg thread"
+                        // Current Thread is Main Thread.
+                    }"
+                )
+            }
+            "90"-> cleverTapAPI?.pushEvent("Send Basic Push")
+            "91"-> cleverTapAPI?.pushEvent("Send Carousel Push")
+            "92"-> cleverTapAPI?.pushEvent("Send Manual Carousel Push")
+            "93"-> cleverTapAPI?.pushEvent("Send Filmstrip Carousel Push")
+            "94"-> cleverTapAPI?.pushEvent("Send Rating Push")
+            "95"-> cleverTapAPI?.pushEvent("Send Product Display Notification")
+            "96"-> cleverTapAPI?.pushEvent("Send Linear Product Display Push")
+            "97"-> cleverTapAPI?.pushEvent("Send CTA Notification")
+            "98"-> cleverTapAPI?.pushEvent("Send Zero Bezel Notification")
+            "99"-> cleverTapAPI?.pushEvent("Send Zero Bezel Text Only Notification")
+            "910"-> cleverTapAPI?.pushEvent("Send Timer Notification")
+            "911"-> cleverTapAPI?.pushEvent("Send Input Box Notification")
+            "912"-> cleverTapAPI?.pushEvent("Send Input Box Reply with Event Notification")
+            "913"-> cleverTapAPI?.pushEvent("Send Input Box Reply with Auto Open Notification")
+            "914"-> cleverTapAPI?.pushEvent("Send Input Box Remind Notification DOC FALSE")
+            "915"-> cleverTapAPI?.pushEvent("Send Input Box CTA DOC true")
+            "916"-> cleverTapAPI?.pushEvent("Send Input Box CTA DOC false")
+            "917"-> cleverTapAPI?.pushEvent("Send Input Box Reminder DOC true")
+            "918"-> cleverTapAPI?.pushEvent("Send Input Box Reminder DOC false")
             //"60" -> webViewClickListener?.onWebViewClick()
 
         }

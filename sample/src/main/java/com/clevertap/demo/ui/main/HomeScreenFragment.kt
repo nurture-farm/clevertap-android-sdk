@@ -57,7 +57,9 @@ class HomeScreenFragment : Fragment() {
         listItemBinding = HomeScreenFragmentBinding.inflate(layoutInflater, container, false).apply {
             viewmodel = viewModel
         }
-        listItemBinding.expandableListView.isNestedScrollingEnabled = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            listItemBinding.expandableListView.isNestedScrollingEnabled = true
+        }
 
         return listItemBinding.root
     }
@@ -119,6 +121,7 @@ class HomeScreenFragment : Fragment() {
                     .setInterval(3600000) // 1 hour
                     .setFastestInterval(1800000) // 30 minutes
                     .setSmallestDisplacement(1000f) // 1 km
+                    .setGeofenceNotificationResponsiveness(300000) // 5 minute
                     .build(), cleverTapInstance
             )
             setOnGeofenceApiInitializedListener {

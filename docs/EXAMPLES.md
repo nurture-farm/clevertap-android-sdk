@@ -150,23 +150,23 @@ Use `onUserLogin` to maintain multiple distinct user profiles on the same device
 Add the following dependencies in your app's `build.gradle`
 
 ```groovy
-implementation "androidx.appcompat:appcompat:1.2.0"//MANDATORY for App Inbox
-implementation "androidx.recyclerview:recyclerview:1.1.0"//MANDATORY for App Inbox
+implementation "androidx.appcompat:appcompat:1.3.1"//MANDATORY for App Inbox
+implementation "androidx.recyclerview:recyclerview:1.2.1"//MANDATORY for App Inbox
 implementation "androidx.viewpager:viewpager:1.0.0"//MANDATORY for App Inbox
-implementation "com.google.android.material:material:1.2.1"//MANDATORY for App Inbox
-implementation "com.github.bumptech.glide:glide:4.11.0"//MANDATORY for App Inbox
+implementation "com.google.android.material:material:1.4.0"//MANDATORY for App Inbox
+implementation "com.github.bumptech.glide:glide:4.12.0"//MANDATORY for App Inbox
 
 //Optional ExoPlayer Libraries for Audio/Video Inbox Messages. Audio/Video messages will be dropped without these dependencies
-implementation "com.google.android.exoplayer:exoplayer:2.11.5"
-implementation "com.google.android.exoplayer:exoplayer-hls:2.11.5"
-implementation "com.google.android.exoplayer:exoplayer-ui:2.11.5"
+implementation "com.google.android.exoplayer:exoplayer:2.15.1"
+implementation "com.google.android.exoplayer:exoplayer-hls:2.15.1"
+implementation "com.google.android.exoplayer:exoplayer-ui:2.15.1"
 ```
 #### Initializing the Inbox
 
 Initializing the Inbox will provide a callback to two methods `inboxDidInitialize()` AND `inboxMessagesDidUpdate()`
 
 ```java
-import com.clevertap.android.sdk.CTInboxActivity;
+import com.clevertap.android.sdk.inbox.CTInboxActivity;
 import com.clevertap.android.sdk.CTInboxListener;
 import com.clevertap.android.sdk.CTInboxStyleConfig;
 import com.clevertap.android.sdk.CleverTapAPI;
@@ -200,6 +200,7 @@ public void inboxDidInitialize(){
     tabs.add("Others");//We support upto 2 tabs only. Additional tabs will be ignored
 
     CTInboxStyleConfig styleConfig = new CTInboxStyleConfig();
+    styleConfig.setFirstTabTitle("First Tab");//By default, name of the first tab is "ALL"
     styleConfig.setTabs(tabs);//Do not use this if you don't want to use tabs
     styleConfig.setTabBackgroundColor("#FF0000");//provide Hex code in string ONLY
     styleConfig.setSelectedTabIndicatorColor("#0000FF");
@@ -336,5 +337,5 @@ To support in-app notifications, register the following activity in your Android
 From CleverTap SDK v3.6.4 onwards, just remove the above the Broadcast Receiver if you are using it and add the following gradle dependency to capture UTM details, app install time, referrer click time and other metrics provided by the Google Install Referrer Library.
 
 ```groovy
-    implementation "com.android.installreferrer:installreferrer:2.1"
+    implementation "com.android.installreferrer:installreferrer:2.2"
 ```

@@ -2,59 +2,91 @@ package com.clevertap.android.sdk;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.UiModeManager;
+import android.app.usage.UsageStatsManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
+import android.graphics.Insets;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
 import android.telephony.TelephonyManager;
 import android.util.DisplayMetrics;
+import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.view.WindowMetrics;
+import androidx.annotation.IntDef;
+import androidx.annotation.RequiresApi;
+import androidx.annotation.RestrictTo;
+import androidx.annotation.RestrictTo.Scope;
 import androidx.core.app.NotificationManagerCompat;
+import com.clevertap.android.sdk.login.LoginInfoProvider;
+import com.clevertap.android.sdk.task.CTExecutorFactory;
+import com.clevertap.android.sdk.task.OnSuccessListener;
+import com.clevertap.android.sdk.task.Task;
+import com.clevertap.android.sdk.utils.CTJsonConverter;
+import com.clevertap.android.sdk.validation.ValidationResult;
+import com.clevertap.android.sdk.validation.ValidationResultFactory;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import org.json.JSONObject;
 
-class DeviceInfo {
+import static android.content.Context.USAGE_STATS_SERVICE;
+
+@RestrictTo(Scope.LIBRARY)
+public class DeviceInfo {
 
     private class DeviceCachedInfo {
 
-        private String bluetoothVersion;
+        private final static String STANDBY_BUCKET_ACTIVE = "active";
+        private final static String STANDBY_BUCKET_FREQUENT = "frequent";
+        private final static String STANDBY_BUCKET_RARE = "rare";
+        private final static String STANDBY_BUCKET_RESTRICTED = "restricted";
+        private final static String STANDBY_BUCKET_WORKING_SET = "working_set";
 
-        private int build;
+        private final String bluetoothVersion;
 
-        private String carrier;
+        private final int build;
 
-        private String countryCode;
+        private final String carrier;
 
-        private int dpi;
+        private final String countryCode;
 
-        private double height;
+        private final int dpi;
 
-        private int heightPixels;
+        private final double height;
 
-        private String manufacturer;
+        private final int heightPixels;
 
-        private String model;
+        private final String manufacturer;
 
-        private String networkType;
+        private final String model;
 
-        private boolean notificationsEnabled;
+        private final String networkType;
 
-        private String osName;
+        private final boolean notificationsEnabled;
 
-        private String osVersion;
+        private final String osName;
 
-        private int sdkVersion;
+        private final String osVersion;
 
-        private String versionName;
+        private final int sdkVersion;
 
-        private double width;
+        private final String versionName;
 
-        private int widthPixels;
+        private final double width;
+
+        private final int widthPixels;
+
+        private String appBucket;
 
         DeviceCachedInfo() {
             versionName = getVersionName();
@@ -74,6 +106,9 @@ class DeviceInfo {
             widthPixels = getWidthPixels();
             dpi = getDPI();
             notificationsEnabled = getNotificationEnabledForUser();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                appBucket = getAppBucket();
+            }
         }
 
         private String getBluetoothVersion() {
@@ -130,20 +165,47 @@ class DeviceInfo {
             if (wm == null) {
                 return 0;
             }
-            DisplayMetrics dm = new DisplayMetrics();
-            wm.getDefaultDisplay().getMetrics(dm);
-            return dm.densityDpi;
+            //Returns the dpi using Device Configuration API for API30 above
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                Configuration configuration = context.getResources().getConfiguration();
+                return configuration.densityDpi;
+            } else {
+                DisplayMetrics dm = new DisplayMetrics();
+                wm.getDefaultDisplay().getMetrics(dm);
+                return dm.densityDpi;
+            }
         }
 
         private double getHeight() {
+            int height;
+            float dpi;
+
             WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
             if (wm == null) {
                 return 0.0;
             }
-            DisplayMetrics dm = new DisplayMetrics();
-            wm.getDefaultDisplay().getMetrics(dm);
-            // Calculate the height in inches
-            double rHeight = dm.heightPixels / dm.ydpi;
+
+            //Returns height using WindowMetrics API for API30 above
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowMetrics windowMetrics = wm.getCurrentWindowMetrics();
+                Configuration configuration = context.getResources().getConfiguration();
+                Insets insets = windowMetrics.getWindowInsets()
+                        .getInsetsIgnoringVisibility(WindowInsets.Type.systemGestures());
+
+                height = windowMetrics.getBounds().height() -
+                        insets.top - insets.bottom;
+
+                dpi = configuration.densityDpi;
+
+            } else {
+                DisplayMetrics dm = new DisplayMetrics();
+                wm.getDefaultDisplay().getMetrics(dm);
+
+                height = dm.heightPixels;
+                dpi = dm.ydpi;
+            }
+            // Calculate the width in inches
+            double rHeight = height / dpi;
             return toTwoPlaces(rHeight);
         }
 
@@ -152,13 +214,54 @@ class DeviceInfo {
             if (wm == null) {
                 return 0;
             }
-            DisplayMetrics dm = new DisplayMetrics();
-            wm.getDefaultDisplay().getMetrics(dm);
-            return dm.heightPixels;
+            //Returns height in pixels using WindowMetrics API for API30 above
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowMetrics windowMetrics = wm.getCurrentWindowMetrics();
+                Insets insets = windowMetrics.getWindowInsets()
+                        .getInsetsIgnoringVisibility(WindowInsets.Type.systemGestures());
+                int heightInPixel = windowMetrics.getBounds().height() -
+                        insets.top - insets.bottom;
+                return heightInPixel;
+            } else {
+                DisplayMetrics dm = new DisplayMetrics();
+                wm.getDefaultDisplay().getMetrics(dm);
+                return dm.heightPixels;
+            }
         }
 
         private String getManufacturer() {
             return Build.MANUFACTURER;
+        }
+
+        /**
+         *  This method is used for devices above API 28
+            This method gets the standby values for app.Standby buckets are divided into the following:-
+            STANDBY_BUCKET_ACTIVE - The app was used very recently, currently in use or likely to be used very soon.
+            STANDBY_BUCKET_FREQUENT - The app was used in the last few days and/or likely to be used in the next few days.
+            STANDBY_BUCKET_RARE - The app has not be used for several days and/or is unlikely to be used for several days.
+            STANDBY_BUCKET_RESTRICTED - The app has not be used for several days, is unlikely to be used for several days, and has
+                                        been misbehaving in some manner.
+            STANDBY_BUCKET_WORKING_SET - The app was used recently and/or likely to be used in the next few hours.
+
+            @return one of the possible String value of AppStandbyBucket(). If no AppBucket info is found,
+                    returns empty String
+        */
+        @RequiresApi(api = Build.VERSION_CODES.P)
+        private String getAppBucket(){
+            UsageStatsManager usm = (UsageStatsManager) context.getSystemService(USAGE_STATS_SERVICE);
+            switch (usm.getAppStandbyBucket()) {
+                case UsageStatsManager.STANDBY_BUCKET_ACTIVE:
+                    return STANDBY_BUCKET_ACTIVE;
+                case UsageStatsManager.STANDBY_BUCKET_FREQUENT:
+                    return STANDBY_BUCKET_FREQUENT;
+                case UsageStatsManager.STANDBY_BUCKET_RARE:
+                    return STANDBY_BUCKET_RARE;
+                case UsageStatsManager.STANDBY_BUCKET_RESTRICTED:
+                    return STANDBY_BUCKET_RESTRICTED;
+                case UsageStatsManager.STANDBY_BUCKET_WORKING_SET:
+                    return STANDBY_BUCKET_WORKING_SET;
+                default: return "";
+            }
         }
 
         private String getModel() {
@@ -173,7 +276,14 @@ class DeviceInfo {
         }
 
         private boolean getNotificationEnabledForUser() {
-            return NotificationManagerCompat.from(context).areNotificationsEnabled();
+            boolean isNotificationEnabled = true;
+            try {
+                isNotificationEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled();
+            } catch (RuntimeException rte) {
+                Logger.d("Runtime exception caused when checking whether notification are enabled or not");
+                rte.printStackTrace();
+            }
+            return isNotificationEnabled;//returns true if any exception is raised.
         }
 
         private String getOsName() {
@@ -200,14 +310,34 @@ class DeviceInfo {
         }
 
         private double getWidth() {
+            int width;
+            float dpi;
+
             WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
             if (wm == null) {
                 return 0.0;
             }
-            DisplayMetrics dm = new DisplayMetrics();
-            wm.getDefaultDisplay().getMetrics(dm);
+
+            //Returns width using WindowMetrics API for API30 above
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowMetrics windowMetrics = wm.getCurrentWindowMetrics();
+                Configuration configuration = context.getResources().getConfiguration();
+                Insets insets = windowMetrics.getWindowInsets()
+                        .getInsetsIgnoringVisibility(WindowInsets.Type.systemGestures());
+                width = windowMetrics.getBounds().width() -
+                        insets.right - insets.left;
+
+                dpi = configuration.densityDpi;
+
+            } else {
+                DisplayMetrics dm = new DisplayMetrics();
+                wm.getDefaultDisplay().getMetrics(dm);
+
+                width = dm.widthPixels;
+                dpi = dm.xdpi;
+            }
             // Calculate the width in inches
-            double rWidth = dm.widthPixels / dm.xdpi;
+            double rWidth = width / dpi;
             return toTwoPlaces(rWidth);
 
         }
@@ -217,9 +347,19 @@ class DeviceInfo {
             if (wm == null) {
                 return 0;
             }
-            DisplayMetrics dm = new DisplayMetrics();
-            wm.getDefaultDisplay().getMetrics(dm);
-            return dm.widthPixels;
+            //Returns width in pixels using WindowMetrics API for API30 above
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowMetrics windowMetrics = wm.getCurrentWindowMetrics();
+                Insets insets = windowMetrics.getWindowInsets()
+                        .getInsetsIgnoringVisibility(WindowInsets.Type.systemGestures());
+                int widthInPixel = windowMetrics.getBounds().width() -
+                        insets.right - insets.left;
+                return widthInPixel;
+            } else {
+                DisplayMetrics dm = new DisplayMetrics();
+                wm.getDefaultDisplay().getMetrics(dm);
+                return dm.widthPixels;
+            }
         }
 
         private double toTwoPlaces(double n) {
@@ -230,9 +370,51 @@ class DeviceInfo {
         }
     }
 
+    /**
+     * Type of a device with below possible values<br>
+     * <li>{@link DeviceInfo#SMART_PHONE}
+     * <li>{@link DeviceInfo#TABLET}
+     * <li>{@link DeviceInfo#TV}
+     * <li>{@link DeviceInfo#UNKNOWN}
+     * <li>{@link DeviceInfo#NULL}
+     */
+    @IntDef({SMART_PHONE, TABLET, TV, UNKNOWN, NULL})
+    @Retention(RetentionPolicy.SOURCE)
+    @interface DeviceType {
+
+    }
+
     private static final String GUID_PREFIX = "__";
 
     private static final String OS_NAME = "Android";
+
+    /**
+     * Device is a smart phone
+     */
+    static final int SMART_PHONE = 1;
+
+    /**
+     * Device is a tablet
+     */
+    static final int TABLET = 2;
+
+    /**
+     * Device is a television
+     */
+    static final int TV = 3;
+
+    /**
+     * Device type is not known
+     */
+    static final int UNKNOWN = 0;
+
+    /**
+     * Initial state of device type before determining
+     */
+    static final int NULL = -1;
+
+    @DeviceType
+    static int sDeviceType = NULL;
 
     private final Object adIDLock = new Object();
 
@@ -240,11 +422,13 @@ class DeviceInfo {
 
     private DeviceCachedInfo cachedInfo;
 
-    private CleverTapInstanceConfig config;
+    private final CleverTapInstanceConfig config;
 
-    private Context context;
+    private final Context context;
 
     private final Object deviceIDLock = new Object();
+
+    private boolean enableNetworkInfoReporting = false;
 
     private String googleAdID = null;
 
@@ -252,28 +436,73 @@ class DeviceInfo {
 
     private boolean limitAdTracking = false;
 
-    private ArrayList<ValidationResult> validationResults = new ArrayList<>();
+    private final CoreMetaData mCoreMetaData;
 
-    DeviceInfo(Context context, CleverTapInstanceConfig config, String cleverTapID) {
+    private final ArrayList<ValidationResult> validationResults = new ArrayList<>();
+
+    /**
+     * Returns the integer identifier for the default app icon.
+     *
+     * @param context The Android context
+     * @return The integer identifier for the image resource
+     */
+    public static int getAppIconAsIntId(final Context context) {
+        ApplicationInfo ai = context.getApplicationInfo();
+        return ai.icon;
+    }
+
+    /**
+     * Determines if a device is tablet, smart phone or TV
+     *
+     * @param context context
+     * @return one of the possible value of {@link DeviceType}
+     */
+    @DeviceType
+    public static int getDeviceType(final Context context) {
+
+        if (sDeviceType == NULL) {
+
+            try {
+                UiModeManager uiModeManager = (UiModeManager) context.getSystemService(Context.UI_MODE_SERVICE);
+                if (uiModeManager.getCurrentModeType() == Configuration.UI_MODE_TYPE_TELEVISION) {
+                    sDeviceType = TV;
+                    return sDeviceType;
+                }
+            } catch (Exception e) {
+                //uiModeManager or context is null
+                Logger.d("Failed to decide whether device is a TV!");
+                e.printStackTrace();
+            }
+
+            try {
+                sDeviceType = context.getResources().getBoolean(R.bool.ctIsTablet) ? TABLET : SMART_PHONE;
+            } catch (Exception e) {
+                // resource not found or context is null
+                Logger.d("Failed to decide whether device is a smart phone or tablet!");
+                e.printStackTrace();
+                sDeviceType = UNKNOWN;
+            }
+
+        }
+        return sDeviceType;
+    }
+
+    DeviceInfo(Context context, CleverTapInstanceConfig config, String cleverTapID,
+            CoreMetaData coreMetaData) {
         this.context = context;
         this.config = config;
         this.library = null;
-        Thread deviceInfoCacheThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                getDeviceCachedInfo();
-            }
-        });
-        deviceInfoCacheThread.start();
-        initDeviceID(cleverTapID);
+        mCoreMetaData = coreMetaData;
+        onInitDeviceInfo(cleverTapID);
+        getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "DeviceInfo() called");
     }
 
-    void forceNewDeviceID() {
+    public void forceNewDeviceID() {
         String deviceID = generateGUID();
         forceUpdateDeviceId(deviceID);
     }
 
-    void forceUpdateCustomCleverTapID(String cleverTapID) {
+    public void forceUpdateCustomCleverTapID(String cleverTapID) {
         if (Utils.validateCTID(cleverTapID)) {
             getConfigLogger()
                     .info(config.getAccountId(), "Setting CleverTap ID to custom CleverTap ID : " + cleverTapID);
@@ -295,56 +524,68 @@ class DeviceInfo {
      * @param id The new device ID
      */
     @SuppressLint("CommitPrefEdits")
-    void forceUpdateDeviceId(String id) {
+    public void forceUpdateDeviceId(String id) {
         getConfigLogger().verbose(this.config.getAccountId(), "Force updating the device ID to " + id);
         synchronized (deviceIDLock) {
             StorageHelper.putString(context, getDeviceIdStorageKey(), id);
         }
     }
 
-    String getAttributionID() {
-        return getDeviceID();
+    //Event
+    public JSONObject getAppLaunchedFields() {
+
+        try {
+            boolean deviceIsMultiUser = false;
+            if (getGoogleAdID() != null) {
+                deviceIsMultiUser = new LoginInfoProvider(context, config, this).deviceIsMultiUser();
+            }
+            return CTJsonConverter.from(this, mCoreMetaData.getLocationFromUser(), enableNetworkInfoReporting,
+                    deviceIsMultiUser);
+        } catch (Throwable t) {
+            config.getLogger().verbose(config.getAccountId(), "Failed to construct App Launched event", t);
+            return new JSONObject();
+        }
     }
 
-    String getBluetoothVersion() {
+    public String getBluetoothVersion() {
         return getDeviceCachedInfo().bluetoothVersion;
     }
 
-    int getBuild() {
+    public int getBuild() {
         return getDeviceCachedInfo().build;
     }
 
-    String getCarrier() {
+    public String getCarrier() {
         return getDeviceCachedInfo().carrier;
     }
 
-    String getCountryCode() {
+    public Context getContext() {
+        return context;
+    }
+
+    public String getCountryCode() {
         return getDeviceCachedInfo().countryCode;
     }
 
-    int getDPI() {
+    public int getDPI() {
         return getDeviceCachedInfo().dpi;
     }
 
-    String getDeviceID() {
+    public String getDeviceID() {
         return _getDeviceID() != null ? _getDeviceID() : getFallBackDeviceID();
     }
 
-    String getGoogleAdID() {
+    public String getGoogleAdID() {
         synchronized (adIDLock) {
             return googleAdID;
         }
     }
 
-    double getHeight() {
+    public double getHeight() {
         return getDeviceCachedInfo().height;
     }
 
-    int getHeightPixels() {
-        return getDeviceCachedInfo().heightPixels;
-    }
-
-    String getLibrary() {
+    public String getLibrary() {
         return library;
     }
 
@@ -352,56 +593,56 @@ class DeviceInfo {
         this.library = library;
     }
 
-    String getManufacturer() {
+    public String getManufacturer() {
         return getDeviceCachedInfo().manufacturer;
     }
 
-    String getModel() {
+    public String getAppBucket() {
+        return getDeviceCachedInfo().appBucket;
+    }
+
+    public String getModel() {
         return getDeviceCachedInfo().model;
     }
 
-    String getNetworkType() {
+    public String getNetworkType() {
         return getDeviceCachedInfo().networkType;
     }
 
-    boolean getNotificationsEnabledForUser() {
+    public boolean getNotificationsEnabledForUser() {
         return getDeviceCachedInfo().notificationsEnabled;
     }
 
-    String getOsName() {
+    public String getOsName() {
         return getDeviceCachedInfo().osName;
     }
 
-    String getOsVersion() {
+    public String getOsVersion() {
         return getDeviceCachedInfo().osVersion;
     }
 
-    int getSdkVersion() {
+    public int getSdkVersion() {
         return getDeviceCachedInfo().sdkVersion;
     }
 
-    ArrayList<ValidationResult> getValidationResults() {
+    public ArrayList<ValidationResult> getValidationResults() {
         // noinspection unchecked
         ArrayList<ValidationResult> tempValidationResults = (ArrayList<ValidationResult>) validationResults.clone();
         validationResults.clear();
         return tempValidationResults;
     }
 
-    String getVersionName() {
+    public String getVersionName() {
         return getDeviceCachedInfo().versionName;
     }
 
-    double getWidth() {
+    public double getWidth() {
         return getDeviceCachedInfo().width;
-    }
-
-    int getWidthPixels() {
-        return getDeviceCachedInfo().widthPixels;
     }
 
     @SuppressLint("MissingPermission")
     @SuppressWarnings("MissingPermission")
-    Boolean isBluetoothEnabled() {
+    public Boolean isBluetoothEnabled() {
         Boolean isBluetoothEnabled = null;
         try {
             PackageManager pm = context.getPackageManager();
@@ -418,17 +659,17 @@ class DeviceInfo {
         return isBluetoothEnabled;
     }
 
-    boolean isErrorDeviceId() {
+    public boolean isErrorDeviceId() {
         return getDeviceID() != null && getDeviceID().startsWith(Constants.ERROR_PROFILE_PREFIX);
     }
 
-    boolean isLimitAdTrackingEnabled() {
+    public boolean isLimitAdTrackingEnabled() {
         synchronized (adIDLock) {
             return limitAdTracking;
         }
     }
 
-    Boolean isWifiConnected() {
+    public Boolean isWifiConnected() {
         Boolean ret = null;
 
         if (PackageManager.PERMISSION_GRANTED == context
@@ -446,6 +687,87 @@ class DeviceInfo {
         return ret;
     }
 
+    public void setCurrentUserOptOutStateFromStorage() {
+        String key = optOutKey();
+        if (key == null) {
+            config.getLogger().verbose(config.getAccountId(),
+                    "Unable to set current user OptOut state from storage: storage key is null");
+            return;
+        }
+        boolean storedOptOut = StorageHelper.getBooleanFromPrefs(context, config, key);
+        mCoreMetaData.setCurrentUserOptedOut(storedOptOut);
+        config.getLogger().verbose(config.getAccountId(),
+                "Set current user OptOut state from storage to: " + storedOptOut + " for key: " + key);
+    }
+
+    void enableDeviceNetworkInfoReporting(boolean value) {
+        enableNetworkInfoReporting = value;
+        StorageHelper.putBoolean(context, StorageHelper.storageKeyWithSuffix(config, Constants.NETWORK_INFO),
+                enableNetworkInfoReporting);
+        config.getLogger()
+                .verbose(config.getAccountId(),
+                        "Device Network Information reporting set to " + enableNetworkInfoReporting);
+    }
+
+    String getAttributionID() {
+        return getDeviceID();
+    }
+
+    int getHeightPixels() {
+        return getDeviceCachedInfo().heightPixels;
+    }
+
+    int getWidthPixels() {
+        return getDeviceCachedInfo().widthPixels;
+    }
+
+    void onInitDeviceInfo(final String cleverTapID) {
+        Task<Void> taskDeviceCachedInfo = CTExecutorFactory.executors(config).ioTask();
+        taskDeviceCachedInfo.execute("getDeviceCachedInfo", new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                getDeviceCachedInfo();
+                return null;
+            }
+        });
+
+        Task<Void> task = CTExecutorFactory.executors(config).ioTask();
+        task.addOnSuccessListener(new OnSuccessListener<Void>() {
+            // callback on main thread
+            @Override
+            public void onSuccess(final Void aVoid) {
+                getConfigLogger().verbose(config.getAccountId() + ":async_deviceID",
+                        "DeviceID initialized successfully!" + Thread.currentThread());
+                // No need to put getDeviceID() on background thread because prefs already loaded
+                CleverTapAPI.instanceWithConfig(context, config).deviceIDCreated(getDeviceID());
+            }
+        });
+        task.execute("initDeviceID", new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                initDeviceID(cleverTapID);
+                return null;
+            }
+        });
+
+    }
+
+    String optOutKey() {
+        String guid = getDeviceID();
+        if (guid == null) {
+            return null;
+        }
+        return "OptOut:" + guid;
+    }
+
+    void setDeviceNetworkInfoReportingFromStorage() {
+        boolean enabled = StorageHelper.getBooleanFromPrefs(context, config, Constants.NETWORK_INFO);
+        config.getLogger()
+                .verbose(config.getAccountId(),
+                        "Setting device network info reporting state from storage to " + enabled);
+        enableNetworkInfoReporting = enabled;
+    }
+
     private String _getDeviceID() {
         synchronized (deviceIDLock) {
             if (this.config.isDefaultInstance()) {
@@ -458,6 +780,7 @@ class DeviceInfo {
     }
 
     private synchronized void fetchGoogleAdID() {
+        getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() called!");
         if (getGoogleAdID() == null && !adIdRun) {
             String advertisingID = null;
             try {
@@ -470,7 +793,11 @@ class DeviceInfo {
                 Boolean limitedAdTracking = (Boolean) isLimitAdTracking.invoke(adInfo);
                 synchronized (adIDLock) {
                     limitAdTracking = limitedAdTracking != null && limitedAdTracking;
+                    getConfigLogger().verbose(config.getAccountId() + ":async_deviceID",
+                            "limitAdTracking = " + limitAdTracking);
                     if (limitAdTracking) {
+                        getConfigLogger().debug(config.getAccountId(),
+                                "Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
                         return;
                     }
                 }
@@ -486,13 +813,22 @@ class DeviceInfo {
             }
             if (advertisingID != null && advertisingID.trim().length() > 2) {
                 synchronized (adIDLock) {
+                    if (advertisingID.contains("00000000")) {
+                        //Device has opted out of sharing Google Advertising ID
+                        getConfigLogger().debug(config.getAccountId(),
+                                "Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
+                        return;
+                    }
                     googleAdID = advertisingID.replace("-", "");
                 }
             }
+
+            getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() done executing!");
         }
     }
 
     private synchronized void generateDeviceID() {
+        getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "generateDeviceID() called!");
         String generatedDeviceID;
         String adId = getGoogleAdID();
         if (adId != null) {
@@ -503,6 +839,7 @@ class DeviceInfo {
             }
         }
         forceUpdateDeviceId(generatedDeviceID);
+        getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "generateDeviceID() done executing!");
     }
 
     private String generateGUID() {
@@ -533,7 +870,7 @@ class DeviceInfo {
     }
 
     private void initDeviceID(String cleverTapID) {
-
+        getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "Called initDeviceID()");
         //Show logging as per Manifest flag
         if (config.getEnableCustomCleverTapId()) {
             if (cleverTapID == null) {
@@ -547,7 +884,9 @@ class DeviceInfo {
             }
         }
 
+        getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "Calling _getDeviceID");
         String deviceID = _getDeviceID();
+        getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "Called _getDeviceID");
         if (deviceID != null && deviceID.trim().length() > 2) {
             getConfigLogger().verbose(config.getAccountId(), "CleverTap ID already present for profile");
             if (cleverTapID != null) {
@@ -563,21 +902,18 @@ class DeviceInfo {
         }
 
         if (!this.config.isUseGoogleAdId()) {
+            getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "Calling generateDeviceID()");
             generateDeviceID();
+            getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "Called generateDeviceID()");
             return;
         }
 
         // fetch the googleAdID to generate GUID
         //has to be called on background thread
-        Thread generateGUIDFromAdIDThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                fetchGoogleAdID();
-                generateDeviceID();
-                CleverTapAPI.instanceWithConfig(context, config).deviceIDCreated(getDeviceID());
-            }
-        });
-        generateGUIDFromAdIDThread.start();
+        fetchGoogleAdID();
+        generateDeviceID();
+
+        getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "initDeviceID() done executing!");
     }
 
     private String recordDeviceError(int messageCode, String... varargs) {
@@ -608,16 +944,5 @@ class DeviceInfo {
     private void updateFallbackID(String fallbackId) {
         getConfigLogger().verbose(this.config.getAccountId(), "Updating the fallback id - " + fallbackId);
         StorageHelper.putString(context, getFallbackIdStorageKey(), fallbackId);
-    }
-
-    /**
-     * Returns the integer identifier for the default app icon.
-     *
-     * @param context The Android context
-     * @return The integer identifier for the image resource
-     */
-    static int getAppIconAsIntId(final Context context) {
-        ApplicationInfo ai = context.getApplicationInfo();
-        return ai.icon;
     }
 }

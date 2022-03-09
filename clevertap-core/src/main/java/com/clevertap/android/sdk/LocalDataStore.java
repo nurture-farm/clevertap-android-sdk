@@ -3,6 +3,13 @@ package com.clevertap.android.sdk;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
+
+import androidx.annotation.RestrictTo;
+import androidx.annotation.RestrictTo.Scope;
+import androidx.annotation.WorkerThread;
+
+import com.clevertap.android.sdk.db.DBAdapter;
+import com.clevertap.android.sdk.events.EventDetail;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -14,7 +21,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 @SuppressWarnings("unused")
-class LocalDataStore {
+@RestrictTo(Scope.LIBRARY)
+public class LocalDataStore {
 
     private static long EXECUTOR_THREAD_ID = 0;
 
@@ -28,13 +36,13 @@ class LocalDataStore {
 
     private final HashMap<String, Object> PROFILE_FIELDS_IN_THIS_SESSION = new HashMap<>();
 
-    private CleverTapInstanceConfig config;
+    private final CleverTapInstanceConfig config;
 
-    private Context context;
+    private final Context context;
 
     private DBAdapter dbAdapter;
 
-    private ExecutorService es;
+    private final ExecutorService es;
 
     private final String eventNamespace = "local_events";
 
@@ -46,7 +54,8 @@ class LocalDataStore {
         inflateLocalProfileAsync(context);
     }
 
-    void changeUser() {
+    @WorkerThread
+    public void changeUser() {
         resetLocalProfileSync();
     }
 
@@ -98,7 +107,8 @@ class LocalDataStore {
         return _getProfileProperty(key);
     }
 
-    void persistEvent(Context context, JSONObject event, int type) {
+    @WorkerThread
+    public void persistEvent(Context context, JSONObject event, int type) {
 
         if (event == null) {
             return;
@@ -113,6 +123,7 @@ class LocalDataStore {
         }
     }
 
+    @WorkerThread
     void removeProfileField(String key) {
         removeProfileField(key, false, true);
     }
@@ -124,7 +135,8 @@ class LocalDataStore {
         removeProfileFields(fields, false);
     }
 
-    void setDataSyncFlag(JSONObject event) {
+    @WorkerThread
+    public void setDataSyncFlag(JSONObject event) {
         try {
             // Check the personalisation flag
             boolean enablePersonalisation = this.config.isPersonalizationEnabled();
@@ -179,8 +191,9 @@ class LocalDataStore {
         setProfileFields(fields, false);
     }
 
+    //Not used.Remove later
     @SuppressWarnings("rawtypes")
-    void syncWithUpstream(Context context, JSONObject response) {
+    public void syncWithUpstream(Context context, JSONObject response) {
         try {
             JSONObject eventUpdates = null;
             JSONObject profileUpdates = null;
@@ -400,7 +413,6 @@ class LocalDataStore {
     }
 
     // local cache/profile key expiry handling
-
     private void inflateLocalProfileAsync(final Context context) {
 
         final String accountID = this.config.getAccountId();
@@ -618,6 +630,7 @@ class LocalDataStore {
         StorageHelper.putInt(context, storageKeyWithSuffix("local_cache_expires_in"), ttl);
     }
 
+
     private void setProfileField(String key, Object value, Boolean fromUpstream, boolean persist) {
         if (key == null || value == null) {
             return;
@@ -671,6 +684,7 @@ class LocalDataStore {
         return (value == null) ? "" : value.toString();
     }
 
+    //Not used.Remove later
     @SuppressWarnings({"rawtypes", "ConstantConditions"})
     private JSONObject syncEventsFromUpstream(Context context, JSONObject events) {
         try {
@@ -753,7 +767,7 @@ class LocalDataStore {
             return null;
         }
     }
-
+    //Not used.Remove later
     @SuppressWarnings("rawtypes")
     private JSONObject syncProfile(JSONObject remoteProfile) {
 

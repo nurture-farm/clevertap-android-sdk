@@ -2,8 +2,10 @@ package com.clevertap.android.sdk;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
+import java.util.HashSet;
 
 /**
  * Class for handling activity lifecycle events
@@ -11,8 +13,7 @@ import android.os.Bundle;
 @SuppressWarnings({"unused", "WeakerAccess"})
 public final class ActivityLifecycleCallback {
 
-    static boolean registered = false;
-
+    public static boolean registered = false;
     /**
      * Enables lifecycle callbacks for Android devices
      *
