@@ -40,6 +40,8 @@ public class CleverTapInstanceConfig implements Parcelable {
 
     private String accountToken;
 
+    private String proxyDomain;
+
     @NonNull
     private ArrayList<String> allowedPushTypes = getAll();
 

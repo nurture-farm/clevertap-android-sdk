@@ -1401,10 +1401,6 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
 
     }
 
-        private String getProxyDomain() {
-        return config.getProxyDomain();
-    }
-
 
     //Util
 
