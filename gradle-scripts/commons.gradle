@@ -3,7 +3,7 @@ apply plugin: 'kotlin-android'
 //apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'jacoco'
 apply plugin: 'maven-publish'
-apply plugin: 'signing'
+// apply plugin: 'signing'
 
 ext {
     Repo = 'Maven'
@@ -199,6 +199,6 @@ afterEvaluate {
     }
 }
 
-signing {
-    sign publishing.publications
-}
+// signing {
+//     sign publishing.publications
+// }
