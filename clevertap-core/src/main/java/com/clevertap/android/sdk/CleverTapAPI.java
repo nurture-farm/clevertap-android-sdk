@@ -2875,20 +2875,6 @@ public class CleverTapAPI implements CleverTapAPIListener {
                 event.put(Constants.ERROR_KEY, getErrorObject(vr));
             }
 
-            //add userId,userType,deviceId in all events if present
-            Object userId = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_ID);
-            if(null != userId) {
-                eventActions.put(Constants.KEY_USER_ID, userId);
-            }
-            Object userType = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_TYPE);
-            if(null != userType) {
-                eventActions.put(Constants.KEY_USER_TYPE, userType);
-            }
-            Object deviceId = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_DEVICE_ID);
-            if(null != deviceId) {
-                eventActions.put(Constants.KEY_DEVICE_ID, deviceId);
-            }
-
             eventName = vr.getObject().toString();
             JSONObject actions = new JSONObject();
             for (String key : eventActions.keySet()) {
@@ -2918,11 +2904,28 @@ public class CleverTapAPI implements CleverTapAPIListener {
                 }
                 actions.put(key, value);
             }
+            insertCommonParamsInEventData(actions);
             event.put("evtName", eventName);
             event.put("evtData", actions);
             queueEvent(context, event, Constants.RAISED_EVENT);
         } catch (Throwable t) {
             // We won't get here
+        }
+    }
+
+    private void insertCommonParamsInEventData(JSONObject eventData) throws JSONException {
+        //add userId,userType,deviceId in all events if present
+        String userType = getConfig().getUserType();
+        if(null != userType) {
+            eventData.put(Constants.KEY_USER_TYPE, userType);
+        }
+        Object userId = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_ID);
+        if(null != userId) {
+            eventData.put(Constants.KEY_USER_ID, userId);
+        }
+        Object deviceId = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_DEVICE_ID);
+        if(null != deviceId) {
+            eventData.put(Constants.KEY_DEVICE_ID, deviceId);
         }
     }
 
@@ -3904,7 +3907,7 @@ public class CleverTapAPI implements CleverTapAPIListener {
     }
 
     public void resetUser() {
-        asyncProfileSwitchUser(null, null, getCleverTapID());
+        clearData(getCleverTapID());
     }
 
     private JSONArray _cleanMultiValues(ArrayList<String> values, String key) {
@@ -4314,7 +4317,7 @@ public class CleverTapAPI implements CleverTapAPIListener {
             if(profile.containsKey(Constants.KEY_IDENTIFIER)) {
                 profile.put(Constants.KEY_USER_ID, profile.get(Constants.KEY_IDENTIFIER));
             }
-            profile.put(Constants.KEY_DEVICE_ID, this.deviceInfo.getDeviceID());
+            profile.put(Constants.KEY_DEVICE_ID, getCleverTapID());
 
             for (String key : profile.keySet()) {
                 Object value = profile.get(key);
@@ -4819,6 +4822,42 @@ public class CleverTapAPI implements CleverTapAPIListener {
                     if (profile != null) {
                         pushProfile(profile);
                     }
+                    forcePushDeviceToken(true);
+                    synchronized (processingUserLoginLock) {
+                        processingUserLoginIdentifier = null;
+                    }
+                    resetInbox();
+                    resetABTesting();
+                    resetFeatureFlags();
+                    resetProductConfigs();
+                    recordDeviceIDErrors();
+                    resetDisplayUnits();
+                    inAppFCManager.changeUser(getCleverTapID());
+                } catch (Throwable t) {
+                    getConfigLogger().verbose(getAccountId(), "Reset Profile error", t);
+                }
+            }
+        });
+    }
+
+    private void clearData(final String cleverTapID) {
+        postAsyncSafely("clearData", new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    //set optOut to false on the current user to unregister the device token
+                    setCurrentUserOptedOut(false);
+                    // unregister the device token on the current user
+                    forcePushDeviceToken(false);
+
+                    // try and flush and then reset the queues
+                    flushQueueSync(context, EventGroup.REGULAR);
+                    flushQueueSync(context, EventGroup.PUSH_NOTIFICATION_VIEWED);
+                    clearQueues(context);
+
+                    // clear out the old data
+                    getLocalDataStore().changeUser();
+                    setCurrentUserOptOutStateFromStorage(); // be sure to call this after the guid is updated
                     forcePushDeviceToken(true);
                     synchronized (processingUserLoginLock) {
                         processingUserLoginIdentifier = null;
@@ -5423,8 +5462,10 @@ public class CleverTapAPI implements CleverTapAPIListener {
             if (deviceInfo.getGoogleAdID() != null) {
                 deviceIsMultiUser = deviceIsMultiUser();
             }
-            return CTJsonConverter.from(deviceInfo, locationFromUser, enableNetworkInfoReporting,
+            JSONObject fields = CTJsonConverter.from(deviceInfo, locationFromUser, enableNetworkInfoReporting,
                     deviceIsMultiUser);
+            insertCommonParamsInEventData(fields);
+            return fields;
         } catch (Throwable t) {
             getConfigLogger().verbose(getAccountId(), "Failed to construct App Launched event", t);
             return new JSONObject();
