@@ -2927,7 +2927,7 @@ public class CleverTapAPI implements CleverTapAPIListener {
         if(null != userId) {
             eventData.put(Constants.KEY_USER_ID, userId);
         }
-        Object deviceId = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_DEVICE_ID);
+        Object deviceId = getCleverTapID();
         if(null != deviceId) {
             eventData.put(Constants.KEY_DEVICE_ID, deviceId);
         }
@@ -3914,8 +3914,8 @@ public class CleverTapAPI implements CleverTapAPIListener {
         this.proxyUrl = proxyUrl;
     }
 
-    public void resetUser() {
-        clearData(getCleverTapID());
+    public void resetUser(CTEventNotifier eventNotifier) {
+        clearData(getCleverTapID(),eventNotifier);
     }
 
     private JSONArray _cleanMultiValues(ArrayList<String> values, String key) {
@@ -4848,7 +4848,7 @@ public class CleverTapAPI implements CleverTapAPIListener {
         });
     }
 
-    private void clearData(final String cleverTapID) {
+    private void clearData(final String cleverTapID, final CTEventNotifier eventNotifier) {
         postAsyncSafely("clearData", new Runnable() {
             @Override
             public void run() {
@@ -4877,8 +4877,10 @@ public class CleverTapAPI implements CleverTapAPIListener {
                     recordDeviceIDErrors();
                     resetDisplayUnits();
                     inAppFCManager.changeUser(getCleverTapID());
+                    eventNotifier.onEventComplete();
                 } catch (Throwable t) {
                     getConfigLogger().verbose(getAccountId(), "Reset Profile error", t);
+                    eventNotifier.onEventCompleteWithError(t);
                 }
             }
         });
@@ -5480,10 +5482,8 @@ public class CleverTapAPI implements CleverTapAPIListener {
             if (deviceInfo.getGoogleAdID() != null) {
                 deviceIsMultiUser = deviceIsMultiUser();
             }
-            JSONObject fields = CTJsonConverter.from(deviceInfo, locationFromUser, enableNetworkInfoReporting,
+            return CTJsonConverter.from(deviceInfo, locationFromUser, enableNetworkInfoReporting,
                     deviceIsMultiUser);
-            insertCommonParamsInEventData(fields);
-            return fields;
         } catch (Throwable t) {
             getConfigLogger().verbose(getAccountId(), "Failed to construct App Launched event", t);
             return new JSONObject();
@@ -7280,7 +7280,9 @@ public class CleverTapAPI implements CleverTapAPIListener {
         JSONObject event = new JSONObject();
         try {
             event.put("evtName", Constants.APP_LAUNCHED_EVENT);
-            event.put("evtData", getAppLaunchedFields());
+            JSONObject eventData = getAppLaunchedFields();
+            insertCommonParamsInEventData(eventData);
+            event.put("evtData", eventData);
         } catch (Throwable t) {
             // We won't get here
         }
