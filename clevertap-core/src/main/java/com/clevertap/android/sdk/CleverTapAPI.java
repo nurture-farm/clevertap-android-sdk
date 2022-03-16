@@ -2927,7 +2927,7 @@ public class CleverTapAPI implements CleverTapAPIListener {
         if(null != userId) {
             eventData.put(Constants.KEY_USER_ID, userId);
         }
-        Object deviceId = getCleverTapID();
+        String deviceId = this.deviceInfo.getGoogleAdID();
         if(null != deviceId) {
             eventData.put(Constants.KEY_DEVICE_ID, deviceId);
         }
