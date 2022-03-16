@@ -47,6 +47,8 @@ public class ManifestInfo {
 
     private static String userType;
 
+    private static String proxyUrl;
+
     public synchronized static ManifestInfo getInstance(Context context) {
         if (instance == null) {
             instance = new ManifestInfo(context);
@@ -98,6 +100,7 @@ public class ManifestInfo {
 
         xiaomiAppKey = _getManifestStringValueForKey(metaData, Constants.LABEL_XIAOMI_APP_KEY);
         xiaomiAppID = _getManifestStringValueForKey(metaData, Constants.LABEL_XIAOMI_APP_ID);
+        proxyUrl = _getManifestStringValueForKey(metaData, Constants.LABEL_PROXY_URL);
     }
 
     public String getFCMSenderId() {
@@ -168,9 +171,9 @@ public class ManifestInfo {
         return useADID;
     }
 
-    String getUserType() {
-        return userType;
-    }
+    String getUserType() { return userType; }
+
+    String getProxyUrl() { return proxyUrl; }
 
     static void changeCredentials(String id, String token, String region, String proxy) {
         accountId = id;

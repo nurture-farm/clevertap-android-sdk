@@ -28,6 +28,7 @@ public interface Constants {
     String LABEL_XIAOMI_APP_KEY = "CLEVERTAP_XIAOMI_APP_KEY";
     String LABEL_XIAOMI_APP_ID = "CLEVERTAP_XIAOMI_APP_ID";
     String LABEL_USER_TYPE = "CLEVERTAP_USER_TYPE";
+    String LABEL_PROXY_URL = "CLEVERTAP_PROXY_URL";
     String CLEVERTAP_OPTOUT = "ct_optout";
     String CLEVERTAP_STORAGE_TAG = "WizRocket";
     String CLEVERTAP_LOG_TAG = "CleverTap";
@@ -237,6 +238,7 @@ public interface Constants {
     String KEY_HAS_URL = "hasUrl";
     String KEY_HAS_LINKS = "hasLinks";
     String KEY_LINKS = "links";
+    String KEY_PROXY_URL = "proxyUrl";
     String TEST_IDENTIFIER = "0_0";
     String FEATURE_DISPLAY_UNIT = "DisplayUnit : ";
 

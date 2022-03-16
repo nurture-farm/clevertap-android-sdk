@@ -75,6 +75,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.ref.WeakReference;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.text.ParseException;
@@ -364,6 +366,8 @@ public class CleverTapAPI implements CleverTapAPIListener {
     private Validator validator;
 
     private JSONObject wzrkParams = null;
+
+    private String proxyUrl = null;
 
     /**
      * This method is used to change the credentials of CleverTap account Id and token programmatically
@@ -3906,6 +3910,10 @@ public class CleverTapAPI implements CleverTapAPIListener {
         }
     }
 
+    public void setProxyUrl(String proxyUrl){
+        this.proxyUrl = proxyUrl;
+    }
+
     public void resetUser() {
         clearData(getCleverTapID());
     }
@@ -4913,7 +4921,17 @@ public class CleverTapAPI implements CleverTapAPIListener {
             throws IOException {
 
         URL url = new URL(endpoint);
-        HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+        HttpsURLConnection conn;
+        String proxyURL = (this.proxyUrl != null) ? this.proxyUrl : config.getProxyUrl();
+        if(proxyUrl != null){
+            String proxyHost = proxyUrl.split(":")[0];
+            int proxyPort = Integer.parseInt(proxyUrl.split(":")[1]);
+            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort));
+            conn = (HttpsURLConnection) url.openConnection(proxy);
+        }
+        else{
+            conn = (HttpsURLConnection) url.openConnection();
+        }
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(10000);
         conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
