@@ -4922,7 +4922,7 @@ public class CleverTapAPI implements CleverTapAPIListener {
 
         URL url = new URL(endpoint);
         HttpsURLConnection conn;
-        String proxyURL = (this.proxyUrl != null) ? this.proxyUrl : config.getProxyUrl();
+        String proxyUrl = (this.proxyUrl != null) ? this.proxyUrl : config.getProxyUrl();
         if(proxyUrl != null){
             String proxyHost = proxyUrl.split(":")[0];
             int proxyPort = Integer.parseInt(proxyUrl.split(":")[1]);
