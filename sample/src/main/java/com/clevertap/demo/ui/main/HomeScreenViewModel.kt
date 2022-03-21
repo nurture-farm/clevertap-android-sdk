@@ -74,7 +74,6 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                 profileUpdate["MyStuffArray"] = arrayOf("Jeans", "Perfume")
 
                 profileUpdate["Identity"] = 1234 // Add user Identity
-                profileUpdate["userType"] = "FARMER" // Add user type
 
                 cleverTapAPI?.pushProfile(profileUpdate)
             }
@@ -90,7 +89,6 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                 profileUpdate["MSG-push"] = false // Disable push notifications
 
                 profileUpdate["Identity"] = 1234 // Add user Identity
-                profileUpdate["userType"] = "FARMER" // Add user type
 
                 cleverTapAPI?.pushProfile(profileUpdate)
             }

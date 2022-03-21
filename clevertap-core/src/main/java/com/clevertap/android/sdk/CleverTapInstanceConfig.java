@@ -99,8 +99,6 @@ public class CleverTapInstanceConfig implements Parcelable {
 
     private String userType;
 
-    private String proxyUrl;
-
     @SuppressWarnings("unused")
     public static CleverTapInstanceConfig createInstance(Context context, @NonNull String accountId,
             @NonNull String accountToken, @NonNull String proxyDomain) {
@@ -148,7 +146,6 @@ public class CleverTapInstanceConfig implements Parcelable {
         this.enableCustomCleverTapId = manifest.useCustomId();
         this.beta = manifest.enableBeta();
         this.userType = manifest.getUserType();
-        this.proxyUrl = manifest.getProxyUrl();
     }
 
     private CleverTapInstanceConfig(String jsonString) throws Throwable {
@@ -219,9 +216,6 @@ public class CleverTapInstanceConfig implements Parcelable {
             if (configJsonObject.has(Constants.KEY_USER_TYPE)) {
                 this.userType = configJsonObject.getString(Constants.KEY_USER_TYPE);
             }
-            if (configJsonObject.has(Constants.KEY_PROXY_URL)) {
-                this.proxyUrl = configJsonObject.getString(Constants.KEY_PROXY_URL);
-            }
         } catch (Throwable t) {
             Logger.v("Error constructing CleverTapInstanceConfig from JSON: " + jsonString + ": ", t.getCause());
             throw (t);
@@ -252,7 +246,6 @@ public class CleverTapInstanceConfig implements Parcelable {
         allowedPushTypes = new ArrayList<>();
         in.readList(allowedPushTypes, String.class.getClassLoader());
         userType = in.readString();
-        proxyUrl = in.readString();
     }
 
     @NonNull
@@ -286,10 +279,6 @@ public class CleverTapInstanceConfig implements Parcelable {
 
     @SuppressWarnings({"unused"})
     public String getUserType() { return userType; }
-
-    @SuppressWarnings({"unused"})
-    public String getProxyUrl() { return proxyUrl; }
-
     @SuppressWarnings({"unused"})
     public String getAccountToken() {
         return accountToken;
@@ -398,7 +387,6 @@ public class CleverTapInstanceConfig implements Parcelable {
         dest.writeByte((byte) (beta ? 0x01 : 0x00));
         dest.writeList(allowedPushTypes);
         dest.writeString(userType);
-        dest.writeString(proxyUrl);
     }
 
     boolean getEnableCustomCleverTapId() {
@@ -476,7 +464,6 @@ public class CleverTapInstanceConfig implements Parcelable {
             configJsonObject.put(Constants.KEY_ENABLE_ABTEST, isABTestingEnabled());
             configJsonObject.put(Constants.KEY_ALLOWED_PUSH_TYPES, toJsonArray(allowedPushTypes));
             configJsonObject.put(Constants.KEY_USER_TYPE, getUserType());
-            configJsonObject.put(Constants.KEY_PROXY_URL, getProxyUrl());
             return configJsonObject.toString();
         } catch (Throwable e) {
             Logger.v("Unable to convert config to JSON : ", e.getCause());
