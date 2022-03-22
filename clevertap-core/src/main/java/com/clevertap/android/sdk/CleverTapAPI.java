@@ -2875,20 +2875,6 @@ public class CleverTapAPI implements CleverTapAPIListener {
                 event.put(Constants.ERROR_KEY, getErrorObject(vr));
             }
 
-            //add userId,userType,deviceId in all events if present
-            Object userId = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_ID);
-            if(null != userId) {
-                eventActions.put(Constants.KEY_USER_ID, userId);
-            }
-            Object userType = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_TYPE);
-            if(null != userType) {
-                eventActions.put(Constants.KEY_USER_TYPE, userType);
-            }
-            Object deviceId = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_DEVICE_ID);
-            if(null != deviceId) {
-                eventActions.put(Constants.KEY_DEVICE_ID, deviceId);
-            }
-
             eventName = vr.getObject().toString();
             JSONObject actions = new JSONObject();
             for (String key : eventActions.keySet()) {
@@ -2918,11 +2904,28 @@ public class CleverTapAPI implements CleverTapAPIListener {
                 }
                 actions.put(key, value);
             }
+            insertCommonParamsInEventData(actions);
             event.put("evtName", eventName);
             event.put("evtData", actions);
             queueEvent(context, event, Constants.RAISED_EVENT);
         } catch (Throwable t) {
             // We won't get here
+        }
+    }
+
+    private void insertCommonParamsInEventData(JSONObject eventData) throws JSONException {
+        //add userId,userType,deviceId in all events if present
+        String userType = getConfig().getUserType();
+        if(null != userType) {
+            eventData.put(Constants.KEY_USER_TYPE, userType);
+        }
+        Object userId = _getProfilePropertyIgnorePersonalizationFlag(Constants.KEY_USER_ID);
+        if(null != userId) {
+            eventData.put(Constants.KEY_USER_ID, userId);
+        }
+        String deviceId = this.deviceInfo.getGoogleAdID();
+        if(null != deviceId) {
+            eventData.put(Constants.KEY_DEVICE_ID, deviceId);
         }
     }
 
@@ -3903,8 +3906,8 @@ public class CleverTapAPI implements CleverTapAPIListener {
         }
     }
 
-    public void resetUser() {
-        asyncProfileSwitchUser(null, null, getCleverTapID());
+    public void resetUser(CTEventNotifier eventNotifier) {
+        clearData(getCleverTapID(),eventNotifier);
     }
 
     private JSONArray _cleanMultiValues(ArrayList<String> values, String key) {
@@ -4310,11 +4313,18 @@ public class CleverTapAPI implements CleverTapAPIListener {
             JSONObject customProfile = new JSONObject();
             JSONObject fieldsToUpdateLocally = new JSONObject();
 
-            //adding here userId and deviceId here, and we assume userType is passed in the profile
+            //adding here userId,deviceId,userType
+            String userType = getConfig().getUserType();
+            if(null != userType) {
+                profile.put(Constants.KEY_USER_TYPE, userType);
+            }
             if(profile.containsKey(Constants.KEY_IDENTIFIER)) {
                 profile.put(Constants.KEY_USER_ID, profile.get(Constants.KEY_IDENTIFIER));
             }
-            profile.put(Constants.KEY_DEVICE_ID, this.deviceInfo.getDeviceID());
+            String deviceId = this.deviceInfo.getGoogleAdID();
+            if(null != deviceId) {
+                profile.put(Constants.KEY_DEVICE_ID, deviceId);
+            }
 
             for (String key : profile.keySet()) {
                 Object value = profile.get(key);
@@ -4832,6 +4842,44 @@ public class CleverTapAPI implements CleverTapAPIListener {
                     inAppFCManager.changeUser(getCleverTapID());
                 } catch (Throwable t) {
                     getConfigLogger().verbose(getAccountId(), "Reset Profile error", t);
+                }
+            }
+        });
+    }
+
+    private void clearData(final String cleverTapID, final CTEventNotifier eventNotifier) {
+        postAsyncSafely("clearData", new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    //set optOut to false on the current user to unregister the device token
+                    setCurrentUserOptedOut(false);
+                    // unregister the device token on the current user
+                    forcePushDeviceToken(false);
+
+                    // try and flush and then reset the queues
+                    flushQueueSync(context, EventGroup.REGULAR);
+                    flushQueueSync(context, EventGroup.PUSH_NOTIFICATION_VIEWED);
+                    clearQueues(context);
+
+                    // clear out the old data
+                    getLocalDataStore().changeUser();
+                    setCurrentUserOptOutStateFromStorage(); // be sure to call this after the guid is updated
+                    forcePushDeviceToken(true);
+                    synchronized (processingUserLoginLock) {
+                        processingUserLoginIdentifier = null;
+                    }
+                    resetInbox();
+                    resetABTesting();
+                    resetFeatureFlags();
+                    resetProductConfigs();
+                    recordDeviceIDErrors();
+                    resetDisplayUnits();
+                    inAppFCManager.changeUser(getCleverTapID());
+                    eventNotifier.onEventComplete();
+                } catch (Throwable t) {
+                    getConfigLogger().verbose(getAccountId(), "Reset Profile error", t);
+                    eventNotifier.onEventCompleteWithError(t);
                 }
             }
         });
@@ -7221,7 +7269,9 @@ public class CleverTapAPI implements CleverTapAPIListener {
         JSONObject event = new JSONObject();
         try {
             event.put("evtName", Constants.APP_LAUNCHED_EVENT);
-            event.put("evtData", getAppLaunchedFields());
+            JSONObject eventData = getAppLaunchedFields();
+            insertCommonParamsInEventData(eventData);
+            event.put("evtData", eventData);
         } catch (Throwable t) {
             // We won't get here
         }

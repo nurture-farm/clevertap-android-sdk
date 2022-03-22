@@ -45,6 +45,8 @@ public class ManifestInfo {
 
     private static String xiaomiAppID;
 
+    private static String userType;
+
     public synchronized static ManifestInfo getInstance(Context context) {
         if (instance == null) {
             instance = new ManifestInfo(context);
@@ -76,6 +78,7 @@ public class ManifestInfo {
         if (proxyDomain == null) {
             proxyDomain = _getManifestStringValueForKey(metaData, Constants.LABEL_PROXY_DOMAIN);
         }
+        userType = _getManifestStringValueForKey(metaData, Constants.LABEL_USER_TYPE);
         notificationIcon = _getManifestStringValueForKey(metaData, Constants.LABEL_NOTIFICATION_ICON);
         useADID = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_USE_GOOGLE_AD_ID));
         appLaunchedDisabled = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_DISABLE_APP_LAUNCH));
@@ -164,6 +167,8 @@ public class ManifestInfo {
     boolean useGoogleAdId() {
         return useADID;
     }
+
+    String getUserType() { return userType; }
 
     static void changeCredentials(String id, String token, String region, String proxy) {
         accountId = id;
