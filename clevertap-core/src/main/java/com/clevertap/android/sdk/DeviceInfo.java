@@ -554,6 +554,15 @@ class DeviceInfo {
                 String error = recordDeviceError(Constants.UNABLE_TO_SET_CT_CUSTOM_ID, deviceID, cleverTapID);
                 getConfigLogger().info(config.getAccountId(), error);
             }
+            if (this.config.isUseGoogleAdId()) {
+                Thread fetchGoogleAdIdThread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        fetchGoogleAdID();
+                    }
+                });
+                fetchGoogleAdIdThread.start();
+            }
             return;
         }
 
@@ -563,21 +572,25 @@ class DeviceInfo {
         }
 
         if (!this.config.isUseGoogleAdId()) {
-            generateDeviceID();
-            return;
-        }
-
-        // fetch the googleAdID to generate GUID
-        //has to be called on background thread
-        Thread generateGUIDFromAdIDThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                fetchGoogleAdID();
-                generateDeviceID();
-                CleverTapAPI.instanceWithConfig(context, config).deviceIDCreated(getDeviceID());
+            String generatedDeviceID;
+            synchronized (deviceIDLock) {
+                generatedDeviceID = generateGUID();
             }
-        });
-        generateGUIDFromAdIDThread.start();
+            forceUpdateDeviceId(generatedDeviceID);
+        }
+        else{
+            // fetch the googleAdID to generate GUID
+            //has to be called on background thread
+            Thread generateGUIDFromAdIDThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    fetchGoogleAdID();
+                    generateDeviceID();
+                    CleverTapAPI.instanceWithConfig(context, config).deviceIDCreated(getDeviceID());
+                }
+            });
+            generateGUIDFromAdIDThread.start();
+        }
     }
 
     private String recordDeviceError(int messageCode, String... varargs) {
