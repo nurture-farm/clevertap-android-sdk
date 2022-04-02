@@ -12,6 +12,7 @@ import com.clevertap.android.sdk.DeviceInfo;
 import com.clevertap.android.sdk.FailureFlushListener;
 import com.clevertap.android.sdk.LocalDataStore;
 import com.clevertap.android.sdk.Logger;
+import com.clevertap.android.sdk.ManifestInfo;
 import com.clevertap.android.sdk.SessionManager;
 import com.clevertap.android.sdk.Utils;
 import com.clevertap.android.sdk.db.BaseDatabaseManager;
@@ -66,6 +67,8 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
 
     private Runnable pushNotificationViewedRunnable = null;
 
+    private ManifestInfo manifest;
+
     public EventQueueManager(final BaseDatabaseManager baseDatabaseManager,
             Context context,
             CleverTapInstanceConfig config,
@@ -92,7 +95,7 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
         logger = this.config.getLogger();
         cleverTapMetaData = coreMetaData;
         this.ctLockManager = ctLockManager;
-
+        this.manifest = ManifestInfo.getInstance(context);
         callbackManager.setFailureFlushListener(this);
     }
 
@@ -204,6 +207,7 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
                     type = "data";
                 } else {
                     type = "event";
+                    addAdditionalEventData(event);
                 }
 
                 // Complete the received event with the other params
@@ -235,6 +239,21 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
             } catch (Throwable e) {
                 config.getLogger().verbose(config.getAccountId(), "Failed to queue event: " + event.toString(), e);
             }
+        }
+    }
+
+    private void addAdditionalEventData(final JSONObject event) throws JSONException {
+        JSONObject evtData = event.getJSONObject("evtData");
+        Object userId = localDataStore.getProfileValueForKey("userId");
+        if(userId != null){
+            evtData.put("userId",userId);
+        }
+        Object userType = localDataStore.getProfileValueForKey("userType");
+        if(userType == null){
+            userType = manifest.getUserType();
+        }
+        if(userType != null){
+            evtData.put("userType",userType);
         }
     }
 
@@ -367,22 +386,22 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
                 if (eventMediator.shouldDropEvent(event, eventType)) {
                     return null;
                 }
-                if (eventMediator.shouldDeferProcessingEvent(event, eventType)) {
+                boolean shouldDeferProcessingEvent = false;
+                if(eventMediator.shouldDeferProcessingEvent(event, eventType)){
+                    shouldDeferProcessingEvent = true;
                     config.getLogger().debug(config.getAccountId(),
                             "App Launched not yet processed, re-queuing event " + event + "after 2s");
+                }
+                else if(!localDataStore.getIsProfileDataLoaded()){
+                    shouldDeferProcessingEvent = true;
+                    config.getLogger().debug(config.getAccountId(),
+                            "Profile Data not yet loaded, re-queuing event " + event + "after 2s");
+                }
+                if (shouldDeferProcessingEvent) {
                     mainLooperHandler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            Task<Void> task = CTExecutorFactory.executors(config).postAsyncSafelyTask();
-                            task.execute("queueEventWithDelay", new Callable<Void>() {
-                                @Override
-                                public Void call() {
-                                    sessionManager.lazyCreateSession(context);
-                                    pushInitialEventsAsync();
-                                    addToQueue(context, event, eventType);
-                                    return null;
-                                }
-                            });
+                            queueEvent(context,event,eventType);
                         }
                     }, 2000);
                 } else {

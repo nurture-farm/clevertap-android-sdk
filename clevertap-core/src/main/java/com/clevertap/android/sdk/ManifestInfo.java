@@ -46,6 +46,10 @@ public class ManifestInfo {
 
     private final String[] profileKeys;
 
+    private static String userType;
+
+    private static String eventPortalDomain;
+
     public synchronized static ManifestInfo getInstance(Context context) {
         if (instance == null) {
             instance = new ManifestInfo(context);
@@ -74,6 +78,8 @@ public class ManifestInfo {
         if (accountRegion == null) {
             accountRegion = _getManifestStringValueForKey(metaData, Constants.LABEL_REGION);
         }
+        eventPortalDomain = _getManifestStringValueForKey(metaData, Constants.LABEL_EVENT_PORTAL_DOMAIN);
+        userType = _getManifestStringValueForKey(metaData, Constants.LABEL_USER_TYPE);
         notificationIcon = _getManifestStringValueForKey(metaData, Constants.LABEL_NOTIFICATION_ICON);
         useADID = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_USE_GOOGLE_AD_ID));
         appLaunchedDisabled = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_DISABLE_APP_LAUNCH));
@@ -99,6 +105,14 @@ public class ManifestInfo {
 
     public String getAccountId() {
         return accountId;
+    }
+
+    public String getEventPortalDomain() {
+        return eventPortalDomain;
+    }
+
+    public String getUserType() {
+        return userType;
     }
 
     public String getExcludedActivities() {
