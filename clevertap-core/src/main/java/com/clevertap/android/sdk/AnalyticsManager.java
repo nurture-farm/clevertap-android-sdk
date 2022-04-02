@@ -101,8 +101,8 @@ public class AnalyticsManager extends BaseAnalyticsManager {
         this.callbackManager = callbackManager;
         this.ctLockManager = ctLockManager;
         this.controllerManager = controllerManager;
-        this.sharedPrefs = context.getSharedPreferences("clevertapSharedPref",Context.MODE_PRIVATE);
-        String commonEventDataStr = sharedPrefs.getString("commonEventData",null);
+        this.sharedPrefs = StorageHelper.getPreferences(context);
+        String commonEventDataStr = StorageHelper.getString(context,"commonEventData",null);
         commonEventData = new HashMap<String,Object>();
         if(commonEventDataStr != null){
             try {
@@ -121,11 +121,9 @@ public class AnalyticsManager extends BaseAnalyticsManager {
     @Override
     public void setCommonEventData(Map<String, Object> data) {
         commonEventData = data;
-        SharedPreferences.Editor commonDataEditor = this.sharedPrefs.edit();
         JSONObject jsonObject = new JSONObject(data);
         String commonEventDataStr = jsonObject.toString();
-        commonDataEditor.putString("commonEventData",commonEventDataStr);
-        commonDataEditor.commit();
+        StorageHelper.putString(context,"commonEventData",commonEventDataStr);
     }
 
     @Override
