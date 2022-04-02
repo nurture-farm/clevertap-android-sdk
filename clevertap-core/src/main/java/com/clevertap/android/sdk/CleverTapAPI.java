@@ -1951,6 +1951,12 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         coreState.getAnalyticsManager().pushEvent(eventName, eventActions);
     }
 
+
+    @SuppressWarnings({"unused", "WeakerAccess"})
+    public void setCommonEventData(Map<String, Object> data) {
+        coreState.getAnalyticsManager().setCommonEventData(data);
+    }
+
     /**
      * Sends the FCM registration ID to CleverTap.
      *
@@ -2714,6 +2720,10 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         } else {
             coreState.getPushProviders()._createNotification(context, extras, Constants.EMPTY_NOTIFICATION_ID);
         }
+    }
+
+    public void resetUser(CTEventNotifier eventNotifier) {
+        coreState.getLoginController().clearData(getCleverTapID(),eventNotifier);
     }
 
    /* public @NonNull INotificationRenderer getPushNotificationRenderer(){
