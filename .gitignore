@@ -8,4 +8,3 @@ gen
 build/
 .gradle/
 *.exec
-sample/google-services.json
