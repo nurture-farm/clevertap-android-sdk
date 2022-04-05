@@ -268,6 +268,12 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
 
     private void addAdditionalEventData(final JSONObject event) throws JSONException {
         JSONObject evtData = event.getJSONObject("evtData");
+        //Add all common Event Data
+        if (commonEventData != null) {
+            for (Map.Entry<String, Object> entry : commonEventData.entrySet()) {
+                evtData.put(entry.getKey(), entry.getValue());
+            }
+        }
         Object userId = localDataStore.getProfileValueForKey("userId");
         if(userId != null){
             evtData.put("userId",userId);
