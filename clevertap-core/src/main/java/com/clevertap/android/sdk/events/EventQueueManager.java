@@ -14,6 +14,7 @@ import com.clevertap.android.sdk.LocalDataStore;
 import com.clevertap.android.sdk.Logger;
 import com.clevertap.android.sdk.ManifestInfo;
 import com.clevertap.android.sdk.SessionManager;
+import com.clevertap.android.sdk.StorageHelper;
 import com.clevertap.android.sdk.Utils;
 import com.clevertap.android.sdk.db.BaseDatabaseManager;
 import com.clevertap.android.sdk.login.IdentityRepo;
@@ -26,7 +27,10 @@ import com.clevertap.android.sdk.task.MainLooperHandler;
 import com.clevertap.android.sdk.task.Task;
 import com.clevertap.android.sdk.validation.ValidationResult;
 import com.clevertap.android.sdk.validation.ValidationResultStack;
+
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
@@ -69,6 +73,8 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
 
     private ManifestInfo manifest;
 
+    private Map<String, Object> commonEventData;
+
     public EventQueueManager(final BaseDatabaseManager baseDatabaseManager,
             Context context,
             CleverTapInstanceConfig config,
@@ -97,6 +103,24 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
         this.ctLockManager = ctLockManager;
         this.manifest = ManifestInfo.getInstance(context);
         callbackManager.setFailureFlushListener(this);
+        loadCommonEventDataFromStorage(context);
+    }
+
+    private void loadCommonEventDataFromStorage(Context context) {
+        String commonEventDataStr = StorageHelper.getString(context,"commonEventData",null);
+        commonEventData = new HashMap<String,Object>();
+        if(commonEventDataStr != null){
+            try {
+                JSONObject jsonObject = new JSONObject(commonEventDataStr);
+                Iterator<String> keys = jsonObject.keys();
+                while(keys.hasNext()){
+                    String key = keys.next();
+                    Object value = jsonObject.get(key);
+                    commonEventData.put(key, value);
+                }
+            } catch (JSONException e) {
+            }
+        }
     }
 
     // only call async
@@ -255,6 +279,8 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
         if(userType != null){
             evtData.put("userType",userType);
         }
+        evtData.put("deviceId",deviceInfo.getTrackingDeviceId());
+        evtData.put("trackingEnabled",deviceInfo.getTrackingEnabled());
     }
 
     public void processPushNotificationViewedEvent(final Context context, final JSONObject event) {
@@ -397,6 +423,11 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
                     config.getLogger().debug(config.getAccountId(),
                             "Profile Data not yet loaded, re-queuing event " + event + "after 2s");
                 }
+                else if(deviceInfo.getTrackingDeviceId() != null){
+                    shouldDeferProcessingEvent = true;
+                    config.getLogger().debug(config.getAccountId(),
+                            "Tracking Device Id not loaded yet, re-queuing event " + event + "after 2s");
+                }
                 if (shouldDeferProcessingEvent) {
                     mainLooperHandler.postDelayed(new Runnable() {
                         @Override
@@ -488,6 +519,14 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
         }
         mainLooperHandler.removeCallbacks(pushNotificationViewedRunnable);
         mainLooperHandler.post(pushNotificationViewedRunnable);
+    }
+
+    @Override
+    public void setCommonEventData(Map<String, Object> data) {
+        commonEventData = data;
+        JSONObject jsonObject = new JSONObject(data);
+        String commonEventDataStr = jsonObject.toString();
+        StorageHelper.putString(context,"commonEventData",commonEventDataStr);
     }
 
     //Util

@@ -4,7 +4,6 @@ import static com.clevertap.android.sdk.utils.CTJsonConverter.getErrorObject;
 import static com.clevertap.android.sdk.utils.CTJsonConverter.getWzrkFields;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -72,10 +71,6 @@ public class AnalyticsManager extends BaseAnalyticsManager {
 
     private NumberValueType numberValueType;
 
-    private Map<String, Object> commonEventData;
-
-    private SharedPreferences sharedPrefs;
-
     enum NumberValueType {
         INT_NUMBER, FLOAT_NUMBER, DOUBLE_NUMBER
     }
@@ -101,29 +96,6 @@ public class AnalyticsManager extends BaseAnalyticsManager {
         this.callbackManager = callbackManager;
         this.ctLockManager = ctLockManager;
         this.controllerManager = controllerManager;
-        this.sharedPrefs = StorageHelper.getPreferences(context);
-        String commonEventDataStr = StorageHelper.getString(context,"commonEventData",null);
-        commonEventData = new HashMap<String,Object>();
-        if(commonEventDataStr != null){
-            try {
-                JSONObject jsonObject = new JSONObject(commonEventDataStr);
-                Iterator<String> keys = jsonObject.keys();
-                while(keys.hasNext()){
-                    String key = keys.next();
-                    Object value = jsonObject.get(key);
-                    commonEventData.put(key, value);
-                }
-            } catch (JSONException e) {
-            }
-        }
-    }
-
-    @Override
-    public void setCommonEventData(Map<String, Object> data) {
-        commonEventData = data;
-        JSONObject jsonObject = new JSONObject(data);
-        String commonEventDataStr = jsonObject.toString();
-        StorageHelper.putString(context,"commonEventData",commonEventDataStr);
     }
 
     @Override

@@ -1954,7 +1954,7 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
 
     @SuppressWarnings({"unused", "WeakerAccess"})
     public void setCommonEventData(Map<String, Object> data) {
-        coreState.getAnalyticsManager().setCommonEventData(data);
+        coreState.getBaseEventQueueManager().setCommonEventData(data);
     }
 
     /**

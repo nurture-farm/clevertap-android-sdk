@@ -6,6 +6,7 @@ import android.app.UiModeManager;
 import android.app.usage.UsageStatsManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -438,6 +439,10 @@ public class DeviceInfo {
 
     private final CoreMetaData mCoreMetaData;
 
+    private String trackingDeviceId;
+
+    private boolean trackingEnabled;
+
     private final ArrayList<ValidationResult> validationResults = new ArrayList<>();
 
     /**
@@ -495,6 +500,15 @@ public class DeviceInfo {
         mCoreMetaData = coreMetaData;
         onInitDeviceInfo(cleverTapID);
         getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "DeviceInfo() called");
+    }
+
+
+    public String getTrackingDeviceId(){
+        return trackingDeviceId;
+    }
+
+    public boolean getTrackingEnabled(){
+        return trackingEnabled;
     }
 
     public void forceNewDeviceID() {
@@ -798,6 +812,7 @@ public class DeviceInfo {
                     if (limitAdTracking) {
                         getConfigLogger().debug(config.getAccountId(),
                                 "Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
+                        setFallbackDeviceIdAsTrackingId();
                         return;
                     }
                 }
@@ -817,12 +832,16 @@ public class DeviceInfo {
                         //Device has opted out of sharing Google Advertising ID
                         getConfigLogger().debug(config.getAccountId(),
                                 "Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
+                        setFallbackDeviceIdAsTrackingId();
                         return;
                     }
                     googleAdID = advertisingID.replace("-", "");
+                    trackingEnabled = true;
                 }
             }
-
+            else{
+                setFallbackDeviceIdAsTrackingId();
+            }
             getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() done executing!");
         }
     }
@@ -840,6 +859,20 @@ public class DeviceInfo {
         }
         forceUpdateDeviceId(generatedDeviceID);
         getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "generateDeviceID() done executing!");
+    }
+
+    void setFallbackDeviceIdAsTrackingId(){
+        if(trackingDeviceId != null){
+            String storedFallbackDeviceId = StorageHelper.getString(context,"fallbackDeviceId",null);
+            if(storedFallbackDeviceId == null){
+                trackingDeviceId = generateGUID();
+                StorageHelper.putStringImmediate(context,"fallbackDeviceId",trackingDeviceId);
+            }
+            else{
+                trackingDeviceId = storedFallbackDeviceId;
+            }
+            trackingEnabled = false;
+        }
     }
 
     private String generateGUID() {
@@ -893,6 +926,12 @@ public class DeviceInfo {
                 String error = recordDeviceError(Constants.UNABLE_TO_SET_CT_CUSTOM_ID, deviceID, cleverTapID);
                 getConfigLogger().info(config.getAccountId(), error);
             }
+            if (this.config.isUseGoogleAdId()) {
+                fetchGoogleAdID();
+            }
+            else{
+                setFallbackDeviceIdAsTrackingId();
+            }
             return;
         }
 
@@ -902,18 +941,22 @@ public class DeviceInfo {
         }
 
         if (!this.config.isUseGoogleAdId()) {
+            setFallbackDeviceIdAsTrackingId();
             getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "Calling generateDeviceID()");
-            generateDeviceID();
+            String generatedDeviceID;
+            synchronized (deviceIDLock) {
+                generatedDeviceID = generateGUID();
+            }
             getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "Called generateDeviceID()");
-            return;
+            forceUpdateDeviceId(generatedDeviceID);
         }
-
-        // fetch the googleAdID to generate GUID
-        //has to be called on background thread
-        fetchGoogleAdID();
-        generateDeviceID();
-
-        getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "initDeviceID() done executing!");
+        else{
+            // fetch the googleAdID to generate GUID
+            //has to be called on background thread
+            fetchGoogleAdID();
+            generateDeviceID();
+            getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "initDeviceID() done executing!");
+        }
     }
 
     private String recordDeviceError(int messageCode, String... varargs) {

@@ -8,8 +8,6 @@ import org.json.JSONObject;
 
 public abstract class BaseAnalyticsManager {
 
-    public abstract void setCommonEventData(Map<String, Object> data);
-
     public abstract void addMultiValuesForKey(String key, ArrayList<String> values);
 
     public abstract void incrementValue(String key, Number value);
