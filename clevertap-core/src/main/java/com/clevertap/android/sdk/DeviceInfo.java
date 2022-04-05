@@ -812,7 +812,7 @@ public class DeviceInfo {
                     if (limitAdTracking) {
                         getConfigLogger().debug(config.getAccountId(),
                                 "Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
-                        setFallbackDeviceIdAsTrackingId();
+                        setFallbackDeviceIdAsTrackingId("Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
                         return;
                     }
                 }
@@ -832,7 +832,7 @@ public class DeviceInfo {
                         //Device has opted out of sharing Google Advertising ID
                         getConfigLogger().debug(config.getAccountId(),
                                 "Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
-                        setFallbackDeviceIdAsTrackingId();
+                        setFallbackDeviceIdAsTrackingId("Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
                         return;
                     }
                     googleAdID = advertisingID.replace("-", "");
@@ -840,7 +840,7 @@ public class DeviceInfo {
                 }
             }
             else{
-                setFallbackDeviceIdAsTrackingId();
+                setFallbackDeviceIdAsTrackingId("advertisingID: " + advertisingID);
             }
             getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() done executing!");
         }
@@ -866,18 +866,18 @@ public class DeviceInfo {
         getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "generateDeviceID() done executing!");
     }
 
-    void setFallbackDeviceIdAsTrackingId(){
-        if(trackingDeviceId == null){
-            String storedFallbackDeviceId = StorageHelper.getString(context,"fallbackDeviceId",null);
-            if(storedFallbackDeviceId == null){
-                trackingDeviceId = generateGUID();
-                StorageHelper.putStringImmediate(context,"fallbackDeviceId",trackingDeviceId);
-            }
-            else{
-                trackingDeviceId = storedFallbackDeviceId;
-            }
-            trackingEnabled = false;
-        }
+    void setFallbackDeviceIdAsTrackingId(String message){
+//        if(trackingDeviceId == null){
+//            String storedFallbackDeviceId = StorageHelper.getString(context,"fallbackDeviceId",null);
+//            if(storedFallbackDeviceId == null){
+//                trackingDeviceId = message;
+//                StorageHelper.putStringImmediate(context,"fallbackDeviceId",trackingDeviceId);
+//            }
+//            else{
+//                trackingDeviceId = storedFallbackDeviceId;
+//            }
+        trackingDeviceId = message;
+        trackingEnabled = false;
     }
 
     private String generateGUID() {
@@ -935,7 +935,7 @@ public class DeviceInfo {
                 fetchGoogleAdID();
             }
             else{
-                setFallbackDeviceIdAsTrackingId();
+                setFallbackDeviceIdAsTrackingId("isUseGoogleAdId = 0");
             }
             return;
         }
@@ -946,7 +946,7 @@ public class DeviceInfo {
         }
 
         if (!this.config.isUseGoogleAdId()) {
-            setFallbackDeviceIdAsTrackingId();
+            setFallbackDeviceIdAsTrackingId("line 949: isUseGoogleAdId:false");
             getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "Calling generateDeviceID()");
             String generatedDeviceID;
             synchronized (deviceIDLock) {
