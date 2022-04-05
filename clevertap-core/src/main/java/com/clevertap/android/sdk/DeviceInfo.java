@@ -836,7 +836,7 @@ public class DeviceInfo {
                         return;
                     }
                     googleAdID = advertisingID.replace("-", "");
-                    trackingEnabled = true;
+                    setGoogleAdIdAsTrackingId();
                 }
             }
             else{
@@ -844,6 +844,11 @@ public class DeviceInfo {
             }
             getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() done executing!");
         }
+    }
+
+    private void setGoogleAdIdAsTrackingId() {
+        trackingDeviceId = googleAdID;
+        trackingEnabled = true;
     }
 
     private synchronized void generateDeviceID() {
@@ -862,7 +867,7 @@ public class DeviceInfo {
     }
 
     void setFallbackDeviceIdAsTrackingId(){
-        if(trackingDeviceId != null){
+        if(trackingDeviceId == null){
             String storedFallbackDeviceId = StorageHelper.getString(context,"fallbackDeviceId",null);
             if(storedFallbackDeviceId == null){
                 trackingDeviceId = generateGUID();

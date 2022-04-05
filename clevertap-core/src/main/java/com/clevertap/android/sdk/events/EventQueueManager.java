@@ -423,7 +423,7 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
                     config.getLogger().debug(config.getAccountId(),
                             "Profile Data not yet loaded, re-queuing event " + event + "after 2s");
                 }
-                else if(deviceInfo.getTrackingDeviceId() != null){
+                else if(deviceInfo.getTrackingDeviceId() == null){
                     shouldDeferProcessingEvent = true;
                     config.getLogger().debug(config.getAccountId(),
                             "Tracking Device Id not loaded yet, re-queuing event " + event + "after 2s");
