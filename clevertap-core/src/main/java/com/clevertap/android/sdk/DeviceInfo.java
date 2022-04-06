@@ -797,14 +797,18 @@ public class DeviceInfo {
         getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() called!");
         if (getGoogleAdID() == null && !adIdRun) {
             String advertisingID = null;
+            StringBuilder buffer = new StringBuilder();
             try {
                 adIdRun = true;
                 Class adIdClient = Class.forName("com.google.android.gms.ads.identifier.AdvertisingIdClient");
+                buffer.append("804: adIdClient created\n");
                 // noinspection unchecked
                 Method getAdInfo = adIdClient.getMethod("getAdvertisingIdInfo", Context.class);
+                buffer.append("807: adInfo created\n");
                 Object adInfo = getAdInfo.invoke(null, context);
                 Method isLimitAdTracking = adInfo.getClass().getMethod("isLimitAdTrackingEnabled");
                 Boolean limitedAdTracking = (Boolean) isLimitAdTracking.invoke(adInfo);
+                buffer.append("811: limitedAdTracking:"+limitedAdTracking+"\n");
                 synchronized (adIDLock) {
                     limitAdTracking = limitedAdTracking != null && limitedAdTracking;
                     getConfigLogger().verbose(config.getAccountId() + ":async_deviceID",
@@ -817,12 +821,16 @@ public class DeviceInfo {
                     }
                 }
                 Method getAdId = adInfo.getClass().getMethod("getId");
+                buffer.append("824: getAdId:\n");
                 advertisingID = (String) getAdId.invoke(adInfo);
+                buffer.append("826: trying Fetch advertisementId:\n");
             } catch (Throwable t) {
                 if (t.getCause() != null) {
+                    buffer.append("829"+"Failed to get Advertising ID: " + t.toString() + t.getCause().toString()+"\n");
                     getConfigLogger().verbose(config.getAccountId(),
                             "Failed to get Advertising ID: " + t.toString() + t.getCause().toString());
                 } else {
+                    buffer.append("833"+"Failed to get Advertising ID: " + t.toString());
                     getConfigLogger().verbose(config.getAccountId(), "Failed to get Advertising ID: " + t.toString());
                 }
             }
@@ -832,7 +840,7 @@ public class DeviceInfo {
                         //Device has opted out of sharing Google Advertising ID
                         getConfigLogger().debug(config.getAccountId(),
                                 "Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
-                        setFallbackDeviceIdAsTrackingId("Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
+                        setFallbackDeviceIdAsTrackingId("Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation\n"+buffer.toString());
                         return;
                     }
                     googleAdID = advertisingID.replace("-", "");
@@ -840,7 +848,7 @@ public class DeviceInfo {
                 }
             }
             else{
-                setFallbackDeviceIdAsTrackingId("advertisingID: " + advertisingID);
+                setFallbackDeviceIdAsTrackingId("advertisingID: " + advertisingID+"\n"+buffer.toString());
             }
             getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() done executing!");
         }
@@ -867,6 +875,12 @@ public class DeviceInfo {
     }
 
     void setFallbackDeviceIdAsTrackingId(String message){
+        if(trackingDeviceId != null){
+            trackingDeviceId = trackingDeviceId+"\n"+message;
+        }
+        else{
+            trackingDeviceId = message;
+        }
 //        if(trackingDeviceId == null){
 //            String storedFallbackDeviceId = StorageHelper.getString(context,"fallbackDeviceId",null);
 //            if(storedFallbackDeviceId == null){
@@ -876,7 +890,7 @@ public class DeviceInfo {
 //            else{
 //                trackingDeviceId = storedFallbackDeviceId;
 //            }
-        trackingDeviceId = message;
+
         trackingEnabled = false;
     }
 
