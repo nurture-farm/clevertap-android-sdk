@@ -801,14 +801,14 @@ public class DeviceInfo {
             try {
                 adIdRun = true;
                 Class adIdClient = Class.forName("com.google.android.gms.ads.identifier.AdvertisingIdClient");
-                buffer.append("804: adIdClient created\n");
+                buffer = buffer.append("804: adIdClient created\n");
                 // noinspection unchecked
                 Method getAdInfo = adIdClient.getMethod("getAdvertisingIdInfo", Context.class);
-                buffer.append("807: adInfo created\n");
+                buffer = buffer.append("807: adInfo created\n");
                 Object adInfo = getAdInfo.invoke(null, context);
                 Method isLimitAdTracking = adInfo.getClass().getMethod("isLimitAdTrackingEnabled");
                 Boolean limitedAdTracking = (Boolean) isLimitAdTracking.invoke(adInfo);
-                buffer.append("811: limitedAdTracking:"+limitedAdTracking+"\n");
+                buffer = buffer.append("811: limitedAdTracking:"+limitedAdTracking+"\n");
                 synchronized (adIDLock) {
                     limitAdTracking = limitedAdTracking != null && limitedAdTracking;
                     getConfigLogger().verbose(config.getAccountId() + ":async_deviceID",
@@ -821,16 +821,16 @@ public class DeviceInfo {
                     }
                 }
                 Method getAdId = adInfo.getClass().getMethod("getId");
-                buffer.append("824: getAdId:\n");
+                buffer = buffer.append("824: getAdId:\n");
                 advertisingID = (String) getAdId.invoke(adInfo);
-                buffer.append("826: trying Fetch advertisementId:\n");
+                buffer = buffer.append("826: trying Fetch advertisementId:\n");
             } catch (Throwable t) {
                 if (t.getCause() != null) {
-                    buffer.append("829"+"Failed to get Advertising ID: " + t.toString() + t.getCause().toString()+"\n");
+                    buffer = buffer.append("829"+"Failed to get Advertising ID: " + t.toString() + t.getCause().toString()+"\n");
                     getConfigLogger().verbose(config.getAccountId(),
                             "Failed to get Advertising ID: " + t.toString() + t.getCause().toString());
                 } else {
-                    buffer.append("833"+"Failed to get Advertising ID: " + t.toString());
+                    buffer = buffer.append("833"+"Failed to get Advertising ID: " + t.toString());
                     getConfigLogger().verbose(config.getAccountId(), "Failed to get Advertising ID: " + t.toString());
                 }
             }
