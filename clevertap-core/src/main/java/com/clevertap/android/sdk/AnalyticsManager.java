@@ -26,7 +26,6 @@ import com.clevertap.android.sdk.validation.ValidationResult;
 import com.clevertap.android.sdk.validation.ValidationResultFactory;
 import com.clevertap.android.sdk.validation.ValidationResultStack;
 import com.clevertap.android.sdk.validation.Validator;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;

@@ -6,7 +6,6 @@ import android.app.UiModeManager;
 import android.app.usage.UsageStatsManager;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -41,8 +40,6 @@ import java.util.concurrent.Callable;
 import org.json.JSONObject;
 
 import static android.content.Context.USAGE_STATS_SERVICE;
-
-import timber.log.Timber;
 
 @RestrictTo(Scope.LIBRARY)
 public class DeviceInfo {
@@ -799,18 +796,14 @@ public class DeviceInfo {
         getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() called!");
         if (getGoogleAdID() == null && !adIdRun) {
             String advertisingID = null;
-            Timber.d("Will fetch googleAdId");
             try {
                 adIdRun = true;
                 Class adIdClient = Class.forName("com.google.android.gms.ads.identifier.AdvertisingIdClient");
-                Timber.d("804: adIdClient created   ----------");
                 // noinspection unchecked
                 Method getAdInfo = adIdClient.getMethod("getAdvertisingIdInfo", Context.class);
-                Timber.d("807: adInfo created----------");
                 Object adInfo = getAdInfo.invoke(null, context);
                 Method isLimitAdTracking = adInfo.getClass().getMethod("isLimitAdTrackingEnabled");
                 Boolean limitedAdTracking = (Boolean) isLimitAdTracking.invoke(adInfo);
-                Timber.d("811: limitedAdTracking:"+limitedAdTracking+"----------");
                 synchronized (adIDLock) {
                     limitAdTracking = limitedAdTracking != null && limitedAdTracking;
                     getConfigLogger().verbose(config.getAccountId() + ":async_deviceID",
@@ -818,22 +811,17 @@ public class DeviceInfo {
                     if (limitAdTracking) {
                         getConfigLogger().debug(config.getAccountId(),
                                 "Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
-                        setFallbackDeviceIdAsTrackingId("Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
+                        setFallbackDeviceIdAsTrackingId();
                         return;
                     }
                 }
                 Method getAdId = adInfo.getClass().getMethod("getId");
-                Timber.d("824: getAdId:----------");
                 advertisingID = (String) getAdId.invoke(adInfo);
-                Timber.d("826: trying Fetch advertisementId:----------");
             } catch (Throwable t) {
-                Timber.d(t);
                 if (t.getCause() != null) {
-                    Timber.d("829"+"Failed to get Advertising ID: " + t.toString() + t.getCause().toString()+"----------");
                     getConfigLogger().verbose(config.getAccountId(),
                             "Failed to get Advertising ID: " + t.toString() + t.getCause().toString());
                 } else {
-                    Timber.d("833"+"Failed to get Advertising ID: " + t.toString());
                     getConfigLogger().verbose(config.getAccountId(), "Failed to get Advertising ID: " + t.toString());
                 }
             }
@@ -843,7 +831,7 @@ public class DeviceInfo {
                         //Device has opted out of sharing Google Advertising ID
                         getConfigLogger().debug(config.getAccountId(),
                                 "Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
-                        setFallbackDeviceIdAsTrackingId("Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
+                        setFallbackDeviceIdAsTrackingId();
                         return;
                     }
                     googleAdID = advertisingID.replace("-", "");
@@ -851,8 +839,7 @@ public class DeviceInfo {
                 }
             }
             else{
-                Timber.d("The AdvertisingID is: %s",advertisingID);
-                setFallbackDeviceIdAsTrackingId("The AdvertisingID is: " + advertisingID+"----------");
+                setFallbackDeviceIdAsTrackingId();
             }
             getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() done executing!");
         }
@@ -878,25 +865,17 @@ public class DeviceInfo {
         getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "generateDeviceID() done executing!");
     }
 
-    void setFallbackDeviceIdAsTrackingId(String message){
-        if(trackingDeviceId != null){
-            trackingDeviceId = trackingDeviceId+"----------"+message;
+    void setFallbackDeviceIdAsTrackingId() {
+        if (trackingDeviceId == null) {
+            String storedFallbackDeviceId = StorageHelper.getString(context, "fallbackDeviceId", null);
+            if (storedFallbackDeviceId == null) {
+                trackingDeviceId = generateGUID();
+                StorageHelper.putStringImmediate(context, "fallbackDeviceId", trackingDeviceId);
+            } else {
+                trackingDeviceId = storedFallbackDeviceId;
+            }
+            trackingEnabled = false;
         }
-        else{
-            trackingDeviceId = message;
-        }
-        Timber.d("%s",trackingDeviceId);
-//        if(trackingDeviceId == null){
-//            String storedFallbackDeviceId = StorageHelper.getString(context,"fallbackDeviceId",null);
-//            if(storedFallbackDeviceId == null){
-//                trackingDeviceId = message;
-//                StorageHelper.putStringImmediate(context,"fallbackDeviceId",trackingDeviceId);
-//            }
-//            else{
-//                trackingDeviceId = storedFallbackDeviceId;
-//            }
-
-        trackingEnabled = false;
     }
 
     private String generateGUID() {
@@ -954,7 +933,7 @@ public class DeviceInfo {
                 fetchGoogleAdID();
             }
             else{
-                setFallbackDeviceIdAsTrackingId("isUseGoogleAdId = 0");
+                setFallbackDeviceIdAsTrackingId();
             }
             return;
         }
@@ -965,7 +944,7 @@ public class DeviceInfo {
         }
 
         if (!this.config.isUseGoogleAdId()) {
-            setFallbackDeviceIdAsTrackingId("line 949: isUseGoogleAdId:false");
+            setFallbackDeviceIdAsTrackingId();
             getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "Calling generateDeviceID()");
             String generatedDeviceID;
             synchronized (deviceIDLock) {
