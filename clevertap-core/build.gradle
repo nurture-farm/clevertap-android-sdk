@@ -38,6 +38,7 @@ dependencies {
     // Unit testing dependencies
     testImplementation project(':test_shared')
     testImplementation Libs.firebase_messaging
+    implementation 'com.jakewharton.timber:timber:4.7.1'
 }
 
 sonarqube {

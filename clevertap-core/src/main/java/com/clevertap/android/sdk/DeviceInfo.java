@@ -42,6 +42,8 @@ import org.json.JSONObject;
 
 import static android.content.Context.USAGE_STATS_SERVICE;
 
+import timber.log.Timber;
+
 @RestrictTo(Scope.LIBRARY)
 public class DeviceInfo {
 
@@ -797,18 +799,18 @@ public class DeviceInfo {
         getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() called!");
         if (getGoogleAdID() == null && !adIdRun) {
             String advertisingID = null;
-            StringBuilder buffer = new StringBuilder();
+            Timber.d("Will fetch googleAdId");
             try {
                 adIdRun = true;
                 Class adIdClient = Class.forName("com.google.android.gms.ads.identifier.AdvertisingIdClient");
-                buffer = buffer.append("804: adIdClient created   ----------");
+                Timber.d("804: adIdClient created   ----------");
                 // noinspection unchecked
                 Method getAdInfo = adIdClient.getMethod("getAdvertisingIdInfo", Context.class);
-                buffer = buffer.append("807: adInfo created----------");
+                Timber.d("807: adInfo created----------");
                 Object adInfo = getAdInfo.invoke(null, context);
                 Method isLimitAdTracking = adInfo.getClass().getMethod("isLimitAdTrackingEnabled");
                 Boolean limitedAdTracking = (Boolean) isLimitAdTracking.invoke(adInfo);
-                buffer = buffer.append("811: limitedAdTracking:"+limitedAdTracking+"----------");
+                Timber.d("811: limitedAdTracking:"+limitedAdTracking+"----------");
                 synchronized (adIDLock) {
                     limitAdTracking = limitedAdTracking != null && limitedAdTracking;
                     getConfigLogger().verbose(config.getAccountId() + ":async_deviceID",
@@ -821,16 +823,17 @@ public class DeviceInfo {
                     }
                 }
                 Method getAdId = adInfo.getClass().getMethod("getId");
-                buffer = buffer.append("824: getAdId:----------");
+                Timber.d("824: getAdId:----------");
                 advertisingID = (String) getAdId.invoke(adInfo);
-                buffer = buffer.append("826: trying Fetch advertisementId:----------");
+                Timber.d("826: trying Fetch advertisementId:----------");
             } catch (Throwable t) {
+                Timber.d(t);
                 if (t.getCause() != null) {
-                    buffer = buffer.append("829"+"Failed to get Advertising ID: " + t.toString() + t.getCause().toString()+"----------");
+                    Timber.d("829"+"Failed to get Advertising ID: " + t.toString() + t.getCause().toString()+"----------");
                     getConfigLogger().verbose(config.getAccountId(),
                             "Failed to get Advertising ID: " + t.toString() + t.getCause().toString());
                 } else {
-                    buffer = buffer.append("833"+"Failed to get Advertising ID: " + t.toString());
+                    Timber.d("833"+"Failed to get Advertising ID: " + t.toString());
                     getConfigLogger().verbose(config.getAccountId(), "Failed to get Advertising ID: " + t.toString());
                 }
             }
@@ -848,7 +851,8 @@ public class DeviceInfo {
                 }
             }
             else{
-                setFallbackDeviceIdAsTrackingId(buffer.toString()+"-" + "advertisingID: " + advertisingID+"----------");
+                Timber.d("The AdvertisingID is: %s",advertisingID);
+                setFallbackDeviceIdAsTrackingId("The AdvertisingID is: " + advertisingID+"----------");
             }
             getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() done executing!");
         }
@@ -881,6 +885,7 @@ public class DeviceInfo {
         else{
             trackingDeviceId = message;
         }
+        Timber.d("%s",trackingDeviceId);
 //        if(trackingDeviceId == null){
 //            String storedFallbackDeviceId = StorageHelper.getString(context,"fallbackDeviceId",null);
 //            if(storedFallbackDeviceId == null){
