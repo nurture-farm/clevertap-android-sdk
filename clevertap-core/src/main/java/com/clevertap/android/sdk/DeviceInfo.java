@@ -843,7 +843,7 @@ public class DeviceInfo {
                         //Device has opted out of sharing Google Advertising ID
                         getConfigLogger().debug(config.getAccountId(),
                                 "Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
-                        setFallbackDeviceIdAsTrackingId("Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation\n"+buffer.toString());
+                        setFallbackDeviceIdAsTrackingId("Device user has opted out of sharing Advertising ID, falling back to random UUID for CleverTap ID generation");
                         return;
                     }
                     googleAdID = advertisingID.replace("-", "");
