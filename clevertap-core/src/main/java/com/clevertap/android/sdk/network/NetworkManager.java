@@ -18,6 +18,7 @@ import com.clevertap.android.sdk.CoreMetaData;
 import com.clevertap.android.sdk.DeviceInfo;
 import com.clevertap.android.sdk.LocalDataStore;
 import com.clevertap.android.sdk.Logger;
+import com.clevertap.android.sdk.ManifestInfo;
 import com.clevertap.android.sdk.StorageHelper;
 import com.clevertap.android.sdk.db.BaseDatabaseManager;
 import com.clevertap.android.sdk.db.QueueCursor;
@@ -88,6 +89,8 @@ public class NetworkManager extends BaseNetworkManager {
 
     private int responseFailureCount = 0;
 
+    private ManifestInfo manifest;
+
     public static boolean isNetworkOnline(Context context) {
 
         try {
@@ -147,6 +150,7 @@ public class NetworkManager extends BaseNetworkManager {
 
         cleverTapResponse = new BaseResponse(context, config, deviceInfo, this, localDataStore, cleverTapResponse);
 
+        manifest = ManifestInfo.getInstance(context);
         setCleverTapResponse(cleverTapResponse);
 
     }
@@ -298,23 +302,6 @@ public class NetworkManager extends BaseNetworkManager {
         this.currentRequestTimestamp = currentRequestTimestamp;
     }
 
-    String getDomain(boolean defaultToHandshakeURL, final EventGroup eventGroup) {
-        String domain = getDomainFromPrefsOrMetadata(eventGroup);
-
-        final boolean emptyDomain = domain == null || domain.trim().length() == 0;
-        if (emptyDomain && !defaultToHandshakeURL) {
-            return null;
-        }
-
-        if (emptyDomain) {
-            domain = Constants.PRIMARY_DOMAIN + "/hello";
-        } else {
-            domain += "/a1";
-        }
-
-        return domain;
-    }
-
     String getDomainFromPrefsOrMetadata(final EventGroup eventGroup) {
 
         try {
@@ -339,8 +326,18 @@ public class NetworkManager extends BaseNetworkManager {
 
     }
 
-    String getEndpoint(final boolean defaultToHandshakeURL, final EventGroup eventGroup) {
-        String domain = getDomain(defaultToHandshakeURL, eventGroup);
+    String getHandshakeEndpoint(){
+        String clevertapEventPortalDomain = manifest.getEventPortalDomain();
+        if(clevertapEventPortalDomain == null){
+            return Constants.PRIMARY_DOMAIN + "/hello";
+        }
+        else{
+            return "https://" + clevertapEventPortalDomain + "?rt=" + Constants.PRIMARY_DOMAIN + "/hello";
+        }
+    }
+
+    String getQueueEndpoint(final EventGroup eventGroup) {
+        String domain = getDomainFromPrefsOrMetadata(eventGroup);
         if (domain == null) {
             logger.verbose(config.getAccountId(), "Unable to configure endpoint, domain is null");
             return null;
@@ -353,14 +350,8 @@ public class NetworkManager extends BaseNetworkManager {
             return null;
         }
 
-        String endpoint = "https://" + domain + "?os=Android&t=" + deviceInfo.getSdkVersion();
+        String endpoint = "https://" + manifest.getEventPortalDomain() + "?rt=" + domain + "/a1&os=Android&t=" + deviceInfo.getSdkVersion();
         endpoint += "&z=" + accountId;
-
-        final boolean needsHandshake = needsHandshakeForDomain(eventGroup);
-        // Don't attach ts if its handshake
-        if (needsHandshake) {
-            return endpoint;
-        }
 
         currentRequestTimestamp = (int) (System.currentTimeMillis() / 1000);
         endpoint += "&ts=" + getCurrentRequestTimestamp();
@@ -514,7 +505,7 @@ public class NetworkManager extends BaseNetworkManager {
 
     void performHandshakeForDomain(final Context context, final EventGroup eventGroup,
             final Runnable handshakeSuccessCallback) {
-        final String endpoint = getEndpoint(true, eventGroup);
+        final String endpoint = getHandshakeEndpoint();
         if (endpoint == null) {
             logger.verbose(config.getAccountId(), "Unable to perform handshake, endpoint is null");
         }
@@ -604,7 +595,7 @@ public class NetworkManager extends BaseNetworkManager {
 
         HttpsURLConnection conn = null;
         try {
-            final String endpoint = getEndpoint(false, eventGroup);
+            final String endpoint = getQueueEndpoint(eventGroup);
 
             // This is just a safety check, which would only arise
             // if upstream didn't adhere to the protocol (sent nothing during the initial handshake)

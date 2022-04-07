@@ -7,7 +7,7 @@
 -keep class com.google.android.exoplayer2.SimpleExoPlayer{*;}
 -keep class com.google.android.exoplayer2.source.hls.HlsMediaSource{*;}
 -keep class com.google.android.exoplayer2.ui.PlayerView{*;}
--keep class com.google.android.gms.ads.identifier.AdvertisingIdClient{*;}
+-keep class com.google.android.gms.ads.**{*;}
 -keep class com.google.android.gms.common.GooglePlayServicesUtil{*;}
 
 -keepattributes Exceptions,InnerClasses,Signature,Deprecated,

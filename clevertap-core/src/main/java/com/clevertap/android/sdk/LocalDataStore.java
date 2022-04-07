@@ -46,6 +46,8 @@ public class LocalDataStore {
 
     private final String eventNamespace = "local_events";
 
+    private boolean isProfileDataLoaded = false;
+
 
     LocalDataStore(Context context, CleverTapInstanceConfig config) {
         this.context = context;
@@ -103,8 +105,12 @@ public class LocalDataStore {
         return getProfileValueForKey(key);
     }
 
-    Object getProfileValueForKey(String key) {
+    public Object getProfileValueForKey(String key) {
         return _getProfileProperty(key);
+    }
+
+    public boolean getIsProfileDataLoaded() {
+        return isProfileDataLoaded;
     }
 
     @WorkerThread
@@ -428,6 +434,7 @@ public class LocalDataStore {
                         JSONObject profile = dbAdapter.fetchUserProfileById(accountID);
 
                         if (profile == null) {
+                            isProfileDataLoaded = true;
                             return;
                         }
 
@@ -449,6 +456,8 @@ public class LocalDataStore {
                                 // no-op
                             }
                         }
+
+                        isProfileDataLoaded = true;
 
                         getConfigLogger().verbose(getConfigAccountId(),
                                 "Local Data Store - Inflated local profile " + PROFILE_FIELDS_IN_THIS_SESSION
