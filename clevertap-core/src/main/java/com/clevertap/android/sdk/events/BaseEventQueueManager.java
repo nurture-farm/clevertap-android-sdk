@@ -25,4 +25,6 @@ public abstract class BaseEventQueueManager {
     public abstract void scheduleQueueFlush(final Context context);
 
     public abstract void setCommonEventData(Map<String, Object> commonEventData);
+
+    public abstract void deferClevertapEventsUntilProfileAndDeviceIsFetched(boolean value);
 }

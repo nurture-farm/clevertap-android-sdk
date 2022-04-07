@@ -39,6 +39,8 @@ import org.json.JSONObject;
 
 public class EventQueueManager extends BaseEventQueueManager implements FailureFlushListener {
 
+    private static final String DEFER_SENDING_EVENT_KEY = "DEFER_SENDING_EVENT_KEY";
+
     private Runnable commsRunnable = null;
 
     private final BaseDatabaseManager baseDatabaseManager;
@@ -75,6 +77,8 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
 
     private Map<String, Object> commonEventData;
 
+    private boolean deferClevertapEventsUntilDataLoaded = true;
+
     public EventQueueManager(final BaseDatabaseManager baseDatabaseManager,
             Context context,
             CleverTapInstanceConfig config,
@@ -103,7 +107,14 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
         this.ctLockManager = ctLockManager;
         this.manifest = ManifestInfo.getInstance(context);
         callbackManager.setFailureFlushListener(this);
+        deferClevertapEventsUntilDataLoaded = (StorageHelper.getInt(context,DEFER_SENDING_EVENT_KEY,1) == 1);
         loadCommonEventDataFromStorage(context);
+    }
+
+    @Override
+    public void deferClevertapEventsUntilProfileAndDeviceIsFetched(boolean value) {
+        deferClevertapEventsUntilDataLoaded = value;
+        StorageHelper.putInt(context,DEFER_SENDING_EVENT_KEY, value ? 1 : 0);
     }
 
     private void loadCommonEventDataFromStorage(Context context) {
@@ -424,15 +435,18 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
                     config.getLogger().debug(config.getAccountId(),
                             "App Launched not yet processed, re-queuing event " + event + "after 2s");
                 }
-                else if(!localDataStore.getIsProfileDataLoaded()){
-                    shouldDeferProcessingEvent = true;
-                    config.getLogger().debug(config.getAccountId(),
-                            "Profile Data not yet loaded, re-queuing event " + event + "after 2s");
-                }
-                else if(deviceInfo.getTrackingDeviceId() == null){
-                    shouldDeferProcessingEvent = true;
-                    config.getLogger().debug(config.getAccountId(),
-                            "Tracking Device Id not loaded yet, re-queuing event " + event + "after 2s");
+                else{
+                    if (deferClevertapEventsUntilDataLoaded) {
+                        if (!localDataStore.getIsProfileDataLoaded()) {
+                            shouldDeferProcessingEvent = true;
+                            config.getLogger().debug(config.getAccountId(),
+                                    "Profile Data not yet loaded, re-queuing event " + event + "after 2s");
+                        } else if (deviceInfo.getTrackingDeviceId() == null) {
+                            shouldDeferProcessingEvent = true;
+                            config.getLogger().debug(config.getAccountId(),
+                                    "Tracking Device Id not loaded yet, re-queuing event " + event + "after 2s");
+                        }
+                    }
                 }
                 if (shouldDeferProcessingEvent) {
                     mainLooperHandler.postDelayed(new Runnable() {

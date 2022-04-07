@@ -2726,6 +2726,10 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         coreState.getLoginController().clearData(getCleverTapID(),eventNotifier);
     }
 
+    public void deferClevertapEventsUntilProfileAndDeviceIsFetched(boolean value) {
+        coreState.getBaseEventQueueManager().deferClevertapEventsUntilProfileAndDeviceIsFetched(value);
+    }
+    
    /* public @NonNull INotificationRenderer getPushNotificationRenderer(){
         return coreState.getPushProviders().getPushNotificationRenderer();
     }*/
