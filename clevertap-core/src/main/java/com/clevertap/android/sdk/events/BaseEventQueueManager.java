@@ -1,6 +1,8 @@
 package com.clevertap.android.sdk.events;
 
 import android.content.Context;
+
+import java.util.Map;
 import java.util.concurrent.Future;
 import org.json.JSONObject;
 
@@ -21,4 +23,8 @@ public abstract class BaseEventQueueManager {
     public abstract void flushQueueSync(final Context context, final EventGroup eventGroup);
 
     public abstract void scheduleQueueFlush(final Context context);
+
+    public abstract void setCommonEventData(Map<String, Object> commonEventData);
+
+    public abstract void deferClevertapEventsUntilProfileAndDeviceIsFetched(boolean value);
 }

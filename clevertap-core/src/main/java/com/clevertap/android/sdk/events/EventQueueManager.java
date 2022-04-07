@@ -12,7 +12,9 @@ import com.clevertap.android.sdk.DeviceInfo;
 import com.clevertap.android.sdk.FailureFlushListener;
 import com.clevertap.android.sdk.LocalDataStore;
 import com.clevertap.android.sdk.Logger;
+import com.clevertap.android.sdk.ManifestInfo;
 import com.clevertap.android.sdk.SessionManager;
+import com.clevertap.android.sdk.StorageHelper;
 import com.clevertap.android.sdk.Utils;
 import com.clevertap.android.sdk.db.BaseDatabaseManager;
 import com.clevertap.android.sdk.login.IdentityRepo;
@@ -25,7 +27,10 @@ import com.clevertap.android.sdk.task.MainLooperHandler;
 import com.clevertap.android.sdk.task.Task;
 import com.clevertap.android.sdk.validation.ValidationResult;
 import com.clevertap.android.sdk.validation.ValidationResultStack;
+
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
@@ -33,6 +38,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class EventQueueManager extends BaseEventQueueManager implements FailureFlushListener {
+
+    private static final String DEFER_SENDING_EVENT_KEY = "DEFER_SENDING_EVENT_KEY";
 
     private Runnable commsRunnable = null;
 
@@ -66,6 +73,12 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
 
     private Runnable pushNotificationViewedRunnable = null;
 
+    private ManifestInfo manifest;
+
+    private Map<String, Object> commonEventData;
+
+    private boolean deferClevertapEventsUntilDataLoaded = true;
+
     public EventQueueManager(final BaseDatabaseManager baseDatabaseManager,
             Context context,
             CleverTapInstanceConfig config,
@@ -92,8 +105,33 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
         logger = this.config.getLogger();
         cleverTapMetaData = coreMetaData;
         this.ctLockManager = ctLockManager;
-
+        this.manifest = ManifestInfo.getInstance(context);
         callbackManager.setFailureFlushListener(this);
+        deferClevertapEventsUntilDataLoaded = (StorageHelper.getInt(context,DEFER_SENDING_EVENT_KEY,1) == 1);
+        loadCommonEventDataFromStorage(context);
+    }
+
+    @Override
+    public void deferClevertapEventsUntilProfileAndDeviceIsFetched(boolean value) {
+        deferClevertapEventsUntilDataLoaded = value;
+        StorageHelper.putInt(context,DEFER_SENDING_EVENT_KEY, value ? 1 : 0);
+    }
+
+    private void loadCommonEventDataFromStorage(Context context) {
+        String commonEventDataStr = StorageHelper.getString(context,"commonEventData",null);
+        commonEventData = new HashMap<String,Object>();
+        if(commonEventDataStr != null){
+            try {
+                JSONObject jsonObject = new JSONObject(commonEventDataStr);
+                Iterator<String> keys = jsonObject.keys();
+                while(keys.hasNext()){
+                    String key = keys.next();
+                    Object value = jsonObject.get(key);
+                    commonEventData.put(key, value);
+                }
+            } catch (JSONException e) {
+            }
+        }
     }
 
     // only call async
@@ -204,6 +242,7 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
                     type = "data";
                 } else {
                     type = "event";
+                    addAdditionalEventData(event);
                 }
 
                 // Complete the received event with the other params
@@ -236,6 +275,29 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
                 config.getLogger().verbose(config.getAccountId(), "Failed to queue event: " + event.toString(), e);
             }
         }
+    }
+
+    private void addAdditionalEventData(final JSONObject event) throws JSONException {
+        JSONObject evtData = event.getJSONObject("evtData");
+        //Add all common Event Data
+        if (commonEventData != null) {
+            for (Map.Entry<String, Object> entry : commonEventData.entrySet()) {
+                evtData.put(entry.getKey(), entry.getValue());
+            }
+        }
+        Object userId = localDataStore.getProfileValueForKey("userId");
+        if(userId != null){
+            evtData.put("userId",userId);
+        }
+        Object userType = localDataStore.getProfileValueForKey("userType");
+        if(userType == null){
+            userType = manifest.getUserType();
+        }
+        if(userType != null){
+            evtData.put("userType",userType);
+        }
+        evtData.put("deviceId",deviceInfo.getTrackingDeviceId());
+        evtData.put("trackingEnabled",deviceInfo.getTrackingEnabled());
     }
 
     public void processPushNotificationViewedEvent(final Context context, final JSONObject event) {
@@ -367,22 +429,30 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
                 if (eventMediator.shouldDropEvent(event, eventType)) {
                     return null;
                 }
-                if (eventMediator.shouldDeferProcessingEvent(event, eventType)) {
+                boolean shouldDeferProcessingEvent = false;
+                if(eventMediator.shouldDeferProcessingEvent(event, eventType)){
+                    shouldDeferProcessingEvent = true;
                     config.getLogger().debug(config.getAccountId(),
                             "App Launched not yet processed, re-queuing event " + event + "after 2s");
+                }
+                else{
+                    if (deferClevertapEventsUntilDataLoaded) {
+                        if (!localDataStore.getIsProfileDataLoaded()) {
+                            shouldDeferProcessingEvent = true;
+                            config.getLogger().debug(config.getAccountId(),
+                                    "Profile Data not yet loaded, re-queuing event " + event + "after 2s");
+                        } else if (deviceInfo.getTrackingDeviceId() == null) {
+                            shouldDeferProcessingEvent = true;
+                            config.getLogger().debug(config.getAccountId(),
+                                    "Tracking Device Id not loaded yet, re-queuing event " + event + "after 2s");
+                        }
+                    }
+                }
+                if (shouldDeferProcessingEvent) {
                     mainLooperHandler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            Task<Void> task = CTExecutorFactory.executors(config).postAsyncSafelyTask();
-                            task.execute("queueEventWithDelay", new Callable<Void>() {
-                                @Override
-                                public Void call() {
-                                    sessionManager.lazyCreateSession(context);
-                                    pushInitialEventsAsync();
-                                    addToQueue(context, event, eventType);
-                                    return null;
-                                }
-                            });
+                            queueEvent(context,event,eventType);
                         }
                     }, 2000);
                 } else {
@@ -469,6 +539,14 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
         }
         mainLooperHandler.removeCallbacks(pushNotificationViewedRunnable);
         mainLooperHandler.post(pushNotificationViewedRunnable);
+    }
+
+    @Override
+    public void setCommonEventData(Map<String, Object> data) {
+        commonEventData = data;
+        JSONObject jsonObject = new JSONObject(data);
+        String commonEventDataStr = jsonObject.toString();
+        StorageHelper.putString(context,"commonEventData",commonEventDataStr);
     }
 
     //Util
