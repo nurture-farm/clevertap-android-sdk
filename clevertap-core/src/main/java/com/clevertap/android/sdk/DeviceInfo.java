@@ -506,8 +506,16 @@ public class DeviceInfo {
         return trackingDeviceId;
     }
 
+    public void setTrackingDeviceId(String trackingDeviceId){
+        this.trackingDeviceId = trackingDeviceId;
+    }
+
     public boolean getTrackingEnabled(){
         return trackingEnabled;
+    }
+
+    public void setTrackingEnabled(boolean trackingEnabled){
+        this.trackingEnabled = trackingEnabled;
     }
 
     public void forceNewDeviceID() {
@@ -793,6 +801,10 @@ public class DeviceInfo {
     }
 
     private synchronized void fetchGoogleAdID() {
+        ManifestInfo manifestInfo = ManifestInfo.getInstance(context);
+        if (manifestInfo.isUseCustomDeviceId()) {
+            return;
+        }
         getConfigLogger().verbose(config.getAccountId() + ":async_deviceID", "fetchGoogleAdID() called!");
         if (getGoogleAdID() == null && !adIdRun) {
             String advertisingID = null;
@@ -866,6 +878,10 @@ public class DeviceInfo {
     }
 
     void setFallbackDeviceIdAsTrackingId() {
+        ManifestInfo manifestInfo = ManifestInfo.getInstance(context);
+        if (manifestInfo.isUseCustomDeviceId()) {
+            return;
+        }
         if (trackingDeviceId == null) {
             String storedFallbackDeviceId = StorageHelper.getString(context, "fallbackDeviceId", null);
             if (storedFallbackDeviceId == null) {

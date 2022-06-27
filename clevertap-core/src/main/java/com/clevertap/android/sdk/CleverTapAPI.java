@@ -2729,7 +2729,15 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     public void deferClevertapEventsUntilProfileAndDeviceIsFetched(boolean value) {
         coreState.getBaseEventQueueManager().deferClevertapEventsUntilProfileAndDeviceIsFetched(value);
     }
-    
+
+    public void setTrackingDeviceId(String trackingDeviceId) {
+        coreState.getDeviceInfo().setTrackingDeviceId(trackingDeviceId);
+    }
+
+    public void setTrackingEnabled(boolean trackingEnabled) {
+        coreState.getDeviceInfo().setTrackingEnabled(trackingEnabled);
+    }
+
    /* public @NonNull INotificationRenderer getPushNotificationRenderer(){
         return coreState.getPushProviders().getPushNotificationRenderer();
     }*/
