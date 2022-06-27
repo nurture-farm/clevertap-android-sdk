@@ -2731,11 +2731,11 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     }
 
     public void setTrackingDeviceId(String trackingDeviceId) {
-        coreState.getDeviceInfo().setTrackingDeviceId(trackingDeviceId);
+        //coreState.getDeviceInfo().setTrackingDeviceId(trackingDeviceId);
     }
 
     public void setTrackingEnabled(boolean trackingEnabled) {
-        coreState.getDeviceInfo().setTrackingEnabled(trackingEnabled);
+//        coreState.getDeviceInfo().setTrackingEnabled(trackingEnabled);
     }
 
    /* public @NonNull INotificationRenderer getPushNotificationRenderer(){
