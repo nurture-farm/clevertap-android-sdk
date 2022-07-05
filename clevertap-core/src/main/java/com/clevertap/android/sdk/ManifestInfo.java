@@ -50,6 +50,8 @@ public class ManifestInfo {
 
     private static String eventPortalDomain;
 
+    private static boolean useCustomDeviceId;
+
     public synchronized static ManifestInfo getInstance(Context context) {
         if (instance == null) {
             instance = new ManifestInfo(context);
@@ -82,6 +84,7 @@ public class ManifestInfo {
         userType = _getManifestStringValueForKey(metaData, Constants.LABEL_USER_TYPE);
         notificationIcon = _getManifestStringValueForKey(metaData, Constants.LABEL_NOTIFICATION_ICON);
         useADID = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_USE_GOOGLE_AD_ID));
+        useCustomDeviceId = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_USE_CUSTOM_DEVICE_ID));
         appLaunchedDisabled = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_DISABLE_APP_LAUNCH));
         excludedActivitiesForInApps = _getManifestStringValueForKey(metaData, Constants.LABEL_INAPP_EXCLUDE);
         sslPinning = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_SSL_PINNING));
@@ -177,6 +180,10 @@ public class ManifestInfo {
 
     boolean useGoogleAdId() {
         return useADID;
+    }
+
+    boolean isUseCustomDeviceId() {
+        return useCustomDeviceId;
     }
 
     @SuppressWarnings("ConstantConditions")
