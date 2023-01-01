@@ -6,12 +6,15 @@ import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import com.clevertap.android.sdk.displayunits.DisplayUnitListener;
 import com.clevertap.android.sdk.displayunits.model.CleverTapDisplayUnit;
+import com.clevertap.android.sdk.interfaces.SCDomainListener;
+import com.clevertap.android.sdk.interfaces.NotificationRenderedListener;
 import com.clevertap.android.sdk.interfaces.OnInitCleverTapIDListener;
 import com.clevertap.android.sdk.product_config.CTProductConfigListener;
 import com.clevertap.android.sdk.pushnotification.CTPushNotificationListener;
 import com.clevertap.android.sdk.pushnotification.amp.CTPushAmpListener;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.List;
 
 @RestrictTo(Scope.LIBRARY)
 public class CallbackManager extends BaseCallbackManager {
@@ -20,9 +23,13 @@ public class CallbackManager extends BaseCallbackManager {
 
     private GeofenceCallback geofenceCallback;
 
+    private SCDomainListener scDomainListener;
+
     private WeakReference<InAppNotificationButtonListener> inAppNotificationButtonListener;
 
     private InAppNotificationListener inAppNotificationListener;
+
+    private final List<PushPermissionResponseListener> pushPermissionResponseListenerList = new ArrayList<>();
 
     private CTInboxListener inboxListener;
 
@@ -33,6 +40,8 @@ public class CallbackManager extends BaseCallbackManager {
     private FailureFlushListener failureFlushListener;
 
     private WeakReference<CTFeatureFlagsListener> featureFlagListenerWeakReference;
+
+    private NotificationRenderedListener notificationRenderedListener;
 
     private OnInitCleverTapIDListener onInitCleverTapIDListener;
 
@@ -97,6 +106,16 @@ public class CallbackManager extends BaseCallbackManager {
     }
 
     @Override
+    public SCDomainListener getSCDomainListener() {
+        return scDomainListener;
+    }
+
+    @Override
+    public void setSCDomainListener(SCDomainListener scDomainListener) {
+        this.scDomainListener = scDomainListener;
+    }
+
+    @Override
     public InAppNotificationButtonListener getInAppNotificationButtonListener() {
         if (inAppNotificationButtonListener != null && inAppNotificationButtonListener.get() != null) {
             return inAppNotificationButtonListener.get();
@@ -116,8 +135,23 @@ public class CallbackManager extends BaseCallbackManager {
     }
 
     @Override
+    public List<PushPermissionResponseListener> getPushPermissionResponseListenerList() {
+        return pushPermissionResponseListenerList;
+    }
+
+    @Override
     public void setInAppNotificationListener(final InAppNotificationListener inAppNotificationListener) {
         this.inAppNotificationListener = inAppNotificationListener;
+    }
+
+    @Override
+    public void registerPushPermissionResponseListener(PushPermissionResponseListener pushPermissionResponseListener) {
+        this.pushPermissionResponseListenerList.add(pushPermissionResponseListener);
+    }
+
+    @Override
+    public void unregisterPushPermissionResponseListener(PushPermissionResponseListener pushPermissionResponseListener) {
+        this.pushPermissionResponseListenerList.remove(pushPermissionResponseListener);
     }
 
     @Override
@@ -184,6 +218,16 @@ public class CallbackManager extends BaseCallbackManager {
     @Override
     public void setOnInitCleverTapIDListener(final OnInitCleverTapIDListener onInitCleverTapIDListener) {
         this.onInitCleverTapIDListener = onInitCleverTapIDListener;
+    }
+
+    @Override
+    public void setNotificationRenderedListener(final NotificationRenderedListener notificationRenderedListener) {
+        this.notificationRenderedListener = notificationRenderedListener;
+    }
+
+    @Override
+    public NotificationRenderedListener getNotificationRenderedListener() {
+        return notificationRenderedListener;
     }
 
     //Profile

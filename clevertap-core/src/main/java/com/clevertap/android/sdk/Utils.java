@@ -1,5 +1,7 @@
 package com.clevertap.android.sdk;
 
+import static com.clevertap.android.sdk.Constants.AUTH;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -16,14 +18,21 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
 import androidx.core.content.ContextCompat;
+import com.clevertap.android.sdk.task.CTExecutorFactory;
+import com.clevertap.android.sdk.task.Task;
+import com.google.firebase.messaging.RemoteMessage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,6 +43,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.zip.GZIPInputStream;
 import javax.net.ssl.HttpsURLConnection;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -57,7 +67,7 @@ public final class Utils {
         return false;
     }
 
-    public static HashMap<String, Object> convertBundleObjectToHashMap(Bundle b) {
+    public static HashMap<String, Object> convertBundleObjectToHashMap(@NonNull Bundle b) {
         final HashMap<String, Object> map = new HashMap<>();
         for (String s : b.keySet()) {
             final Object o = b.get(s);
@@ -145,8 +155,8 @@ public final class Utils {
         return converted.toString();
     }
 
-    public static Bitmap getBitmapFromURL(String srcUrl) {
-        // Safe bet, won't have more than three /s
+    public static Bitmap getBitmapFromURL(@NonNull String srcUrl) {
+        // Safe bet, won't have more than three /s . url must not be null since we are not handling null pointer exception that would cause otherwise
         srcUrl = srcUrl.replace("///", "/");
         srcUrl = srcUrl.replace("//", "/");
         srcUrl = srcUrl.replace("http:/", "http://");
@@ -162,6 +172,96 @@ public final class Utils {
         } catch (IOException e) {
 
             Logger.v("Couldn't download the notification icon. URL was: " + srcUrl);
+            e.printStackTrace();
+            return null;
+            //todo catch other exceptions?
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            } catch (Throwable t) {
+                Logger.v("Couldn't close connection!", t);
+            }
+        }
+    }
+
+    public static Bitmap getBitmapFromURLWithSizeConstraint(String srcUrl, int size) {
+        // Safe bet, won't have more than three /s
+        srcUrl = srcUrl.replace("///", "/");
+        srcUrl = srcUrl.replace("//", "/");
+        srcUrl = srcUrl.replace("http:/", "http://");
+        srcUrl = srcUrl.replace("https:/", "https://");
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URL(srcUrl);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setDoInput(true);
+            connection.setUseCaches(true);
+            connection.addRequestProperty("Accept-Encoding", "gzip, deflate");
+            connection.connect();
+            // expect HTTP 200 OK, so we don't mistakenly save error report
+            // instead of the file
+            if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                Logger.d("File not loaded completely not going forward. URL was: " + srcUrl);
+                return null;
+            }
+
+            // might be -1: server did not report the length
+            long fileLength = connection.getContentLength();
+            boolean isGZipEncoded = (connection.getContentEncoding() != null &&
+                    connection.getContentEncoding().contains("gzip"));
+
+            // download the file
+            InputStream input = connection.getInputStream();
+
+            byte[] buffer = new byte[16384];
+            ByteArrayOutputStream finalData = new ByteArrayOutputStream();
+
+            Logger.v("Downloading " + srcUrl + "....");
+            long total = 0;
+            int count;
+            while ((count = input.read(buffer)) != -1) {
+                total += count;
+                finalData.write(buffer, 0, count);
+                if (total > size) {
+                    Logger.v("Image size is larger than " + size + " bytes. Cancelling download!");
+                    return null;
+                }
+                Logger.v("Downloaded " + total + " bytes");
+            }
+
+            byte[] tmpByteArray = new byte[16384];
+            long totalDownloaded = total;
+
+            Logger.v("Total download size for bitmap = " + totalDownloaded);
+
+            if (isGZipEncoded) {
+                InputStream is = new ByteArrayInputStream(finalData.toByteArray());
+                ByteArrayOutputStream decompressedFile = new ByteArrayOutputStream();
+                GZIPInputStream gzipInputStream = new GZIPInputStream(is);
+                total = 0;
+                int counter;
+                while ((counter = gzipInputStream.read(tmpByteArray)) != -1) {
+                    total += counter;
+                    decompressedFile.write(tmpByteArray, 0, counter);
+                }
+                Logger.v("Total decompressed download size for bitmap = " + total);
+                if (fileLength != -1 && fileLength != totalDownloaded) {
+                    Logger.d("File not loaded completely not going forward. URL was: " + srcUrl);
+                    return null;
+                }
+                return BitmapFactory.decodeByteArray(decompressedFile.toByteArray(), 0, (int) total);
+            }
+
+            if (fileLength != -1 && fileLength != totalDownloaded) {
+                Logger.d("File not loaded completely not going forward. URL was: " + srcUrl);
+                return null;
+            }
+            return BitmapFactory.decodeByteArray(finalData.toByteArray(), 0, (int) totalDownloaded);
+        } catch (IOException e) {
+            e.printStackTrace();
+            Logger.v("Couldn't download the file. URL was: " + srcUrl);
             return null;
         } finally {
             try {
@@ -223,13 +323,14 @@ public final class Utils {
 
             return getDeviceNetworkType(context);
 
+
         } catch (Throwable t) {
             return "Unavailable";
         }
     }
 
     @SuppressLint("MissingPermission")
-    public static String getDeviceNetworkType(final Context context) {
+    public static String getDeviceNetworkType(@NonNull  final Context context) {
         // Fall back to network type
         TelephonyManager teleMan = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
         if (teleMan == null) {
@@ -302,6 +403,12 @@ public final class Utils {
 
     public static Bitmap getNotificationBitmap(String icoPath, boolean fallbackToAppIcon, final Context context)
             throws NullPointerException {
+        return getNotificationBitmapWithSizeConstraints(icoPath,fallbackToAppIcon,context,-1);
+    }
+
+    public static Bitmap getNotificationBitmapWithSizeConstraints(String icoPath, boolean fallbackToAppIcon,
+            final Context context, int size)
+            throws NullPointerException {
         // If the icon path is not specified
         if (icoPath == null || icoPath.equals("")) {
             return fallbackToAppIcon ? getAppIcon(context) : null;
@@ -310,8 +417,26 @@ public final class Utils {
         if (!icoPath.startsWith("http")) {
             icoPath = Constants.ICON_BASE_URL + "/" + icoPath;
         }
-        Bitmap ic = getBitmapFromURL(icoPath);
+        Bitmap ic;
+        if (size == -1) {
+            ic = getBitmapFromURL(icoPath);
+        } else {
+            ic = getBitmapFromURLWithSizeConstraint(icoPath, size);
+        }
         return (ic != null) ? ic : ((fallbackToAppIcon) ? getAppIcon(context) : null);
+    }
+
+    /**
+     * get bitmap from url within defined timeoutMillis bound and sizeBytes bound or else return null or app icon
+     * based on fallbackToAppIcon param
+     */
+    public static Bitmap getNotificationBitmapWithTimeoutAndSize(String icoPath, boolean fallbackToAppIcon,
+            final Context context, final CleverTapInstanceConfig config, long timeoutMillis, int sizeBytes)
+            throws NullPointerException {
+        Task<Bitmap> task = CTExecutorFactory.executors(config).ioTask();
+        return task.submitAndGetResult("getNotificationBitmap",
+                () -> getNotificationBitmapWithSizeConstraints(icoPath, fallbackToAppIcon, context, sizeBytes)
+                , timeoutMillis);
     }
 
     public static int getNow() {
@@ -332,7 +457,7 @@ public final class Utils {
      * @param context    The Android {@link Context}
      * @param permission The fully qualified Android permission name
      */
-    public static boolean hasPermission(final Context context, String permission) {
+    public static boolean hasPermission(@NonNull final Context context,@NonNull String permission) {
         try {
             return PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(context, permission);
         } catch (Throwable t) {
@@ -352,7 +477,7 @@ public final class Utils {
     }
 
     @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
-    public static boolean isServiceAvailable(Context context, Class clazz) {
+    public static boolean isServiceAvailable(@NonNull Context context, Class clazz) {
         if (clazz == null) {
             return false;
         }
@@ -454,14 +579,14 @@ public final class Utils {
             Logger.i("Custom CleverTap ID passed is greater than 64 characters. ");
             return false;
         }
-        if (!cleverTapID.matches("[A-Za-z0-9()!:$@_-]*")) {
-            Logger.i("Custom CleverTap ID cannot contain special characters apart from :,(,),_,!,@,$ and - ");
+        if (!cleverTapID.matches("[=|<>;+.A-Za-z0-9()!:$@_-]*")) {
+            Logger.i("Custom CleverTap ID cannot contain special characters apart from : =,(,),_,!,@,$,|<,>,;,+,. and - ");
             return false;
         }
         return true;
     }
 
-    static Bitmap drawableToBitmap(Drawable drawable)
+    static Bitmap drawableToBitmap(@NonNull Drawable drawable)
             throws NullPointerException {
         if (drawable instanceof BitmapDrawable) {
             return ((BitmapDrawable) drawable).getBitmap();
@@ -485,9 +610,10 @@ public final class Utils {
         boolean exoPlayerPresent = false;
         Class className = null;
         try {
-            className = Class.forName("com.google.android.exoplayer2.SimpleExoPlayer");
+            className = Class.forName("com.google.android.exoplayer2.ExoPlayer");
             className = Class.forName("com.google.android.exoplayer2.source.hls.HlsMediaSource");
-            className = Class.forName("com.google.android.exoplayer2.ui.PlayerView");
+            className = Class.forName("com.google.android.exoplayer2.ui.StyledPlayerView");
+
             Logger.d("ExoPlayer is present");
             exoPlayerPresent = true;
         } catch (Throwable t) {
@@ -512,10 +638,44 @@ public final class Utils {
             }
             return drawableToBitmap(logo);
         } catch (Exception e) {
+            e.printStackTrace();
             // Try to get the app icon now
             // No error handling here - handle upstream
             return drawableToBitmap(context.getPackageManager().getApplicationIcon(context.getApplicationInfo()));
         }
+    }
+
+    public static String getSCDomain(String domain) {
+        String[] parts = domain.split("\\.", 2);
+        return parts[0] + "." + AUTH + "." + parts[1];
+    }
+
+    public static boolean isRenderFallback(RemoteMessage remoteMessage, Context context) {
+        boolean renderRateKillSwitch = Boolean
+                .parseBoolean(remoteMessage.getData().get(Constants.WZRK_TSR_FB));//tsrfb
+        boolean renderRateFallback = Boolean
+                .parseBoolean(remoteMessage.getData().get(Constants.NOTIFICATION_RENDER_FALLBACK));
+
+        return !renderRateKillSwitch && renderRateFallback;
+
+    }
+
+    public static void navigateToAndroidSettingsForNotifications(Context context){
+        Intent intent = new Intent();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            intent.setAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+            intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.getPackageName());
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP){
+            intent.setAction("android.settings.APP_NOTIFICATION_SETTINGS");
+            intent.putExtra("app_package", context.getPackageName());
+            intent.putExtra("app_uid", context.getApplicationInfo().uid);
+        } else {
+            intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.addCategory(Intent.CATEGORY_DEFAULT);
+            intent.setData(Uri.parse("package:" + context.getPackageName()));
+        }
+        context.startActivity(intent);
     }
 
     static {

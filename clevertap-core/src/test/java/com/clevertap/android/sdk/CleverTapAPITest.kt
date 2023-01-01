@@ -2,6 +2,7 @@ package com.clevertap.android.sdk
 
 import android.location.Location
 import android.os.Bundle
+import com.clevertap.android.sdk.pushnotification.CoreNotificationRenderer
 import com.clevertap.android.sdk.task.CTExecutorFactory
 import com.clevertap.android.sdk.task.MockCTExecutors
 import com.clevertap.android.shared.test.BaseTestCase
@@ -295,6 +296,57 @@ class CleverTapAPITest : BaseTestCase() {
     }
 
     @Test
+    fun test_changeXiaomiCredentials_whenCredsChangedTwice_credentialsMustNotChange() {
+        mockStatic(CleverTapFactory::class.java).use {
+            mockStatic(CTExecutorFactory::class.java).use {
+                `when`(CTExecutorFactory.executors(any())).thenReturn(
+                    MockCTExecutors(cleverTapInstanceConfig)
+                )
+
+                `when`(CleverTapFactory.getCoreState(
+                    ArgumentMatchers.any(),
+                    ArgumentMatchers.any(),
+                    ArgumentMatchers.any()
+                )).thenReturn(corestate)
+            }
+
+            CleverTapAPI.getDefaultInstance(application)
+            CleverTapAPI.changeXiaomiCredentials("appId123", "appKey123")
+            CleverTapAPI.changeXiaomiCredentials("appId234", "appKey234")
+
+            val instance = ManifestInfo.getInstance(application)
+
+            assertNotEquals("appId234", instance.xiaomiAppID)
+            assertNotEquals("appKey234", instance.xiaomiAppKey)
+        }
+    }
+
+    @Test
+    fun test_changeXiaomiCredentials_whenCredsChangedOnce_credentialsMustChange() {
+        mockStatic(CleverTapFactory::class.java).use {
+            mockStatic(CTExecutorFactory::class.java).use {
+                `when`(CTExecutorFactory.executors(any())).thenReturn(
+                    MockCTExecutors(cleverTapInstanceConfig)
+                )
+
+                `when`(CleverTapFactory.getCoreState(
+                    ArgumentMatchers.any(),
+                    ArgumentMatchers.any(),
+                    ArgumentMatchers.any()
+                )).thenReturn(corestate)
+            }
+
+            CleverTapAPI.getDefaultInstance(application)
+            CleverTapAPI.changeXiaomiCredentials("appId123", "appKey123")
+
+            val instance = ManifestInfo.getInstance(application)
+
+            assertEquals("appId123", instance.xiaomiAppID)
+            assertEquals("appKey123", instance.xiaomiAppKey)
+        }
+    }
+
+    @Test
     fun test_createNotification_whenInstancesNull__createNotificationMustBeCalled() {
 
         mockStatic(CTExecutorFactory::class.java).use {
@@ -318,9 +370,12 @@ class CleverTapAPITest : BaseTestCase() {
                 )
                         .thenReturn(corestate)
                 val bundle = Bundle()
+                val lock = Object()
                 //CleverTapAPI.getDefaultInstance(application)
                 //CleverTapAPI.setInstances(null)
+                `when`(corestate.pushProviders.pushRenderingLock).thenReturn(lock)
                 CleverTapAPI.createNotification(application, bundle)
+                verify(corestate.pushProviders).pushNotificationRenderer = any(CoreNotificationRenderer::class.java)
                 verify(corestate.pushProviders)._createNotification(
                         application,
                         bundle,
@@ -341,20 +396,24 @@ class CleverTapAPITest : BaseTestCase() {
             mockStatic(CleverTapFactory::class.java).use {
                 `when`(
                         CleverTapFactory.getCoreState(
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any(),
-                                ArgumentMatchers.any()
+                            ArgumentMatchers.any(),
+                            ArgumentMatchers.any(),
+                            ArgumentMatchers.any()
                         )
                 )
-                        .thenReturn(corestate)
+                    .thenReturn(corestate)
                 val bundle = Bundle()
+                val lock = Object()
                 bundle.putString(Constants.WZRK_ACCT_ID_KEY, Constant.ACC_ID)
                 CleverTapAPI.instanceWithConfig(application, cleverTapInstanceConfig)
+
+                `when`(corestate.pushProviders.pushRenderingLock).thenReturn(lock)
                 CleverTapAPI.createNotification(application, bundle)
+                verify(corestate.pushProviders).pushNotificationRenderer = any(CoreNotificationRenderer::class.java)
                 verify(corestate.pushProviders)._createNotification(
-                        application,
-                        bundle,
-                        Constants.EMPTY_NOTIFICATION_ID
+                    application,
+                    bundle,
+                    Constants.EMPTY_NOTIFICATION_ID
                 )
             }
         }

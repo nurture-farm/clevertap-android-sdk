@@ -2,6 +2,7 @@ package com.clevertap.android.sdk;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.WorkerThread;
 
@@ -9,7 +10,7 @@ import androidx.annotation.WorkerThread;
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public final class StorageHelper {
 
-    public static SharedPreferences getPreferences(Context context, String namespace) {
+    public static SharedPreferences getPreferences(@NonNull Context context, String namespace) {
         String path = Constants.CLEVERTAP_STORAGE_TAG;
 
         if (namespace != null) {
@@ -18,15 +19,27 @@ public final class StorageHelper {
         return context.getSharedPreferences(path, Context.MODE_PRIVATE);
     }
 
-    public static SharedPreferences getPreferences(Context context) {
+    public static SharedPreferences getPreferences(@NonNull  Context context) {
         return getPreferences(context, null);
     }
 
-    public static String getString(Context context, String key, String defaultValue) {
+    public static String getString(@NonNull Context context, @NonNull String key, String defaultValue) {
         return getPreferences(context).getString(key, defaultValue);
     }
 
-    public static String getStringFromPrefs(Context context, CleverTapInstanceConfig config, String rawKey,
+    /**
+     * returns a String From Local Storage.
+     * The key used for getting the value depends upon a few factors:
+     * A) When config is default instance:
+     *      1. we search for the value for key "[rawKey]:[account_id]" and return it
+     *      2. if no value is found for key "[rawKey]:[account_id]", we search for just key "[rawKey]" and return it
+     *      3. if no value is found for key "[rawKey]", we return default value
+     *
+     * B) When config is NOT default instance:
+     *      1. we search for the value for key "[rawKey]:[account_id]" and return it
+     *      2. if no value is found for key "[rawKey]:[account_id]", we return default value
+     */
+    public static String getStringFromPrefs(@NonNull Context context,@NonNull CleverTapInstanceConfig config, String rawKey,
             String defaultValue) {
         if (config.isDefaultInstance()) {
             String _new = getString(context, storageKeyWithSuffix(config, rawKey), defaultValue);
@@ -89,12 +102,12 @@ public final class StorageHelper {
     }
 
     //Preferences
-    public static String storageKeyWithSuffix(CleverTapInstanceConfig config, String key) {
+    public static String storageKeyWithSuffix(@NonNull CleverTapInstanceConfig config,@NonNull String key) {
         return key + ":" + config.getAccountId();
     }
 
     @SuppressWarnings("SameParameterValue")
-    static boolean getBoolean(Context context, String key, boolean defaultValue) {
+    public static boolean getBoolean(Context context, String key, boolean defaultValue) {
         return getPreferences(context).getBoolean(key, defaultValue);
     }
 
@@ -149,16 +162,28 @@ public final class StorageHelper {
         return getPreferences(context, nameSpace).getString(key, defaultValue);
     }
 
-    static void putBoolean(Context context, String key, boolean value) {
+    public static void putBoolean(Context context, String key, boolean value) {
         SharedPreferences prefs = getPreferences(context);
         SharedPreferences.Editor editor = prefs.edit().putBoolean(key, value);
         persist(editor);
+    }
+
+    public static void putBooleanImmediate(Context context, String key, boolean value) {
+        SharedPreferences prefs = getPreferences(context);
+        SharedPreferences.Editor editor = prefs.edit().putBoolean(key, value);
+        persistImmediately(editor);
     }
 
     public static void putInt(Context context, String key, int value) {
         SharedPreferences prefs = getPreferences(context);
         SharedPreferences.Editor editor = prefs.edit().putInt(key, value);
         persist(editor);
+    }
+
+    public static void putIntImmediate(Context context, String key, int value) {
+        SharedPreferences prefs = getPreferences(context);
+        SharedPreferences.Editor editor = prefs.edit().putInt(key, value);
+        persistImmediately(editor);
     }
 
     static void putLong(Context context, String key, long value) {

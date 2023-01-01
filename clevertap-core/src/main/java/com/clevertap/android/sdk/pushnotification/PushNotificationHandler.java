@@ -32,6 +32,14 @@ public class PushNotificationHandler implements ActionButtonClickHandler {
         return !(("0").equals(pt_id) || pt_id == null || pt_id.isEmpty());
     }
 
+    private boolean isForSignedCall(Bundle extras) {
+        if (extras == null) {
+            return false;
+        }
+        String source = extras.getString("source");
+        return (("signedcall").equals(source));
+    }
+
     private PushNotificationHandler() {
         // NO-OP
     }
@@ -55,6 +63,9 @@ public class PushNotificationHandler implements ActionButtonClickHandler {
                 if (isForPushTemplates(message) && CleverTapAPI.getNotificationHandler() != null) {
                     // render push template
                     CleverTapAPI.getNotificationHandler().onMessageReceived(applicationContext, message, pushType);
+                } else if(isForSignedCall(message) && CleverTapAPI.getSignedCallNotificationHandler() != null){
+                    // handle voip push payload
+                    CleverTapAPI.getSignedCallNotificationHandler().onMessageReceived(applicationContext, message, pushType);
                 } else {
                     // render core push
                     cleverTapAPI.renderPushNotification(new CoreNotificationRenderer(), applicationContext, message);

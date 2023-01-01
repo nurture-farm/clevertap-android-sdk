@@ -9,7 +9,7 @@ import com.clevertap.android.shared.test.BaseTestCase
 import com.clevertap.android.shared.test.TestApplication
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
-import com.google.firebase.iid.FirebaseInstanceId
+import com.google.firebase.messaging.FirebaseMessaging
 import org.junit.*
 import org.junit.runner.*
 import org.mockito.Mockito.*
@@ -38,15 +38,6 @@ class FcmSdkHandlerImplTest : BaseTestCase() {
         mockStatic(PackageUtils::class.java).use {
             `when`(PackageUtils.isGooglePlayServicesAvailable(application)).thenReturn(false)
             Assert.assertFalse(handler.isAvailable)
-        }
-    }
-
-    @Test
-    fun isAvailable_Valid_Manifest_Returns_True() {
-        mockStatic(PackageUtils::class.java).use {
-            `when`(PackageUtils.isGooglePlayServicesAvailable(application)).thenReturn(true)
-            `when`(manifestInfo.fcmSenderId).thenReturn(FCM_SENDER_ID)
-            Assert.assertTrue(handler.isAvailable)
         }
     }
 
@@ -113,17 +104,11 @@ class FcmSdkHandlerImplTest : BaseTestCase() {
         Assert.assertEquals(handler.pushType, FCM)
     }
 
-    @Test
+    /*@Test
     fun testGetFCMSenderID() {
         handler.fcmSenderID
         verify(manifestInfo, times(1)).fcmSenderId
-    }
-
-    @Test
-    fun getSenderId_Valid_Manifest() {
-        `when`(manifestInfo.fcmSenderId).thenReturn(FCM_SENDER_ID)
-        Assert.assertEquals(handler.senderId, FCM_SENDER_ID)
-    }
+    }*/
 
     @Test
     fun getSenderId_Invalid_Manifest_Valid_Config_Json() {
@@ -153,8 +138,8 @@ class FcmSdkHandlerImplTest : BaseTestCase() {
 
     @Test
     fun testRequestToken_Exception_Null_Token() {
-        mockStatic(FirebaseInstanceId::class.java).use {
-            `when`(FirebaseInstanceId.getInstance()).thenThrow(RuntimeException("Something Went wrong"))
+        mockStatic(FirebaseMessaging::class.java).use {
+            `when`(FirebaseMessaging.getInstance()).thenThrow(RuntimeException("Something Went wrong"))
             handler.requestToken()
             verify(listener, times(1)).onNewToken(null, FCM)
         }

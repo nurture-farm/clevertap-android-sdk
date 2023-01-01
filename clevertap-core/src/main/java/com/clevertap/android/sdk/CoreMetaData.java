@@ -6,6 +6,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import java.lang.ref.WeakReference;
+import java.util.HashMap;
 import org.json.JSONObject;
 
 /**
@@ -52,7 +53,14 @@ public class CoreMetaData extends CleverTapMetaData {
 
     private boolean offline;
 
+    /**
+     * Last notification received on device from CleverTap in an active session of a process(before process is killed)
+     */
+    private String lastNotificationId;
+
     private final Object optOutFlagLock = new Object();
+
+    private HashMap<String, Integer> customSdkVersions = new HashMap<>();
 
     private long referrerClickTime = 0;
 
@@ -64,6 +72,14 @@ public class CoreMetaData extends CleverTapMetaData {
 
     public static Activity getCurrentActivity() {
         return (currentActivity == null) ? null : currentActivity.get();
+    }
+
+    public String getLastNotificationId() {
+        return lastNotificationId;
+    }
+
+    void setLastNotificationId(final String lastNotificationId) {
+        this.lastNotificationId = lastNotificationId;
     }
 
     static int getInitialAppEnteredForegroundTime() {
@@ -165,6 +181,19 @@ public class CoreMetaData extends CleverTapMetaData {
 
     public void setGeofenceSDKVersion(int geofenceSDKVersion) {
         this.geofenceSDKVersion = geofenceSDKVersion;
+    }
+
+    public int getCustomSdkVersion(String customSdkName) {
+        Integer version = customSdkVersions.get(customSdkName);
+        return version!=null ? version : 0;
+    }
+
+    public void setCustomSdkVersion(String customSdkName,int customSdkVersion) {
+        customSdkVersions.put(customSdkName,customSdkVersion);
+    }
+
+    public HashMap<String,Integer> getAllCustomSdkVersions(){
+        return customSdkVersions;
     }
 
     void setLastSessionLength(final int lastSessionLength) {

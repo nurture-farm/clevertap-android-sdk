@@ -14,8 +14,16 @@ ext {
 
 apply from: "../gradle-scripts/commons.gradle"
 
+android{
+    repositories {
+        flatDir {
+            dirs 'libs'
+        }
+    }
+}
+
 dependencies {
-    implementation fileTree('libs')
+    compileOnly fileTree(include: ["*.jar", "*.aar"], dir: "libs")
 
     compileOnly project(':clevertap-core')
     compileOnly Libs.androidx_annotation

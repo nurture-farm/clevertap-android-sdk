@@ -1,0 +1,70 @@
+runs:
+  using: "composite"
+  steps:
+
+    - name: detekt-clevertap-core
+      if: always()
+      shell: bash
+      run: ./gradlew :clevertap-core:detekt
+
+    - name: Upload AAR and apk files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: detekt-clevertap-core
+        path: clevertap-core/build/reports/detekt
+
+    ###------##----------###------##----------###------##----------###------##----------###------##----------###------##----------###------##----------
+
+    - name: detekt-clevertap-geofence
+      if: always()
+      shell: bash
+      run: ./gradlew :clevertap-geofence:detekt
+
+    - name: Upload AAR and apk files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: detekt-clevertap-geofence
+        path: clevertap-geofence/build/reports/detekt
+
+    ###------##----------###------##----------###------##----------###------##----------###------##----------###------##----------###------##----------
+
+    - name: detekt-clevertap-hms
+      if: always()
+      shell: bash
+      run: ./gradlew :clevertap-hms:detekt
+
+    - name: Upload AAR and apk files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: detekt-clevertap-hms
+        path: clevertap-hms/build/reports/detekt
+
+    ###------##----------###------##----------###------##----------###------##----------###------##----------###------##----------###------##----------
+
+    - name: detekt-clevertap-pushTemplates
+      if: always()
+      shell: bash
+      run: ./gradlew :clevertap-pushtemplates:detekt
+
+    - name: Upload AAR and apk files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: detekt-clevertap-pushTemplates
+        path:  clevertap-pushtemplates/build/reports/detekt
+
+    ###------##----------###------##----------###------##----------###------##----------###------##----------###------##----------###------##----------
+
+    - name: detekt-clevertap-xps
+      shell: bash
+      run: ./gradlew :clevertap-xps:detekt
+
+    - name: Upload AAR and apk files
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: detekt-clevertap-xps
+        path: clevertap-xps/build/reports/detekt

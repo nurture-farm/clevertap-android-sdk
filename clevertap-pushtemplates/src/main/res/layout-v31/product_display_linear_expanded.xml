@@ -33,7 +33,6 @@
                 android:layout_height="match_parent"
                 android:layout_weight="2"
                 android:gravity="center"
-                android:text="1234567890123456"
                 android:textAppearance="@style/PushTitle" />
 
             <Button
@@ -42,7 +41,6 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:background="@android:color/holo_red_dark"
-                android:text="Buy Now"
                 android:textAppearance="@style/PushMessage"
                 android:textColor="@android:color/white" />
 

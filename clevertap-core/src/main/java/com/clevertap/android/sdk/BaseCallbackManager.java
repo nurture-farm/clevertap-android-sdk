@@ -2,11 +2,14 @@ package com.clevertap.android.sdk;
 
 import com.clevertap.android.sdk.displayunits.DisplayUnitListener;
 import com.clevertap.android.sdk.displayunits.model.CleverTapDisplayUnit;
+import com.clevertap.android.sdk.interfaces.SCDomainListener;
+import com.clevertap.android.sdk.interfaces.NotificationRenderedListener;
 import com.clevertap.android.sdk.interfaces.OnInitCleverTapIDListener;
 import com.clevertap.android.sdk.product_config.CTProductConfigListener;
 import com.clevertap.android.sdk.pushnotification.CTPushNotificationListener;
 import com.clevertap.android.sdk.pushnotification.amp.CTPushAmpListener;
 import java.util.ArrayList;
+import java.util.List;
 
 public abstract class BaseCallbackManager {
 
@@ -20,9 +23,13 @@ public abstract class BaseCallbackManager {
 
     public abstract GeofenceCallback getGeofenceCallback();
 
+    public abstract SCDomainListener getSCDomainListener();
+
     public abstract InAppNotificationButtonListener getInAppNotificationButtonListener();
 
     public abstract InAppNotificationListener getInAppNotificationListener();
+
+    public abstract List<PushPermissionResponseListener> getPushPermissionResponseListenerList();
 
     public abstract CTInboxListener getInboxListener();
 
@@ -49,10 +56,16 @@ public abstract class BaseCallbackManager {
 
     public abstract void setGeofenceCallback(GeofenceCallback geofenceCallback);
 
+    public abstract void setSCDomainListener(SCDomainListener scDomainListener);
+
     public abstract void setInAppNotificationButtonListener(
             InAppNotificationButtonListener inAppNotificationButtonListener);
 
     public abstract void setInAppNotificationListener(InAppNotificationListener inAppNotificationListener);
+
+    public abstract void unregisterPushPermissionResponseListener(PushPermissionResponseListener pushPermissionResponseListener);
+
+    public abstract void registerPushPermissionResponseListener(PushPermissionResponseListener pushPermissionResponseListener);
 
     public abstract void setInboxListener(CTInboxListener inboxListener);
 
@@ -69,4 +82,8 @@ public abstract class BaseCallbackManager {
     public abstract OnInitCleverTapIDListener getOnInitCleverTapIDListener();
 
     public abstract void setOnInitCleverTapIDListener(OnInitCleverTapIDListener onInitCleverTapIDListener);
+
+    public abstract void setNotificationRenderedListener(NotificationRenderedListener notificationRenderedListener);
+
+    public abstract NotificationRenderedListener getNotificationRenderedListener();
 }

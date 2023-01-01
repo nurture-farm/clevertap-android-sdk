@@ -6,8 +6,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.clevertap.android.sdk.CTInboxStyleConfig
 import com.clevertap.android.sdk.CleverTapAPI
-import java.util.ArrayList
-import java.util.Date
+import com.clevertap.android.sdk.Constants
+import com.clevertap.android.sdk.inapp.CTLocalInApp
+import java.util.*
 
 class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel() {
 
@@ -103,8 +104,12 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                 cleverTapAPI?.pushProfile(profileUpdate)
             }
             "13" -> {
-                //Update(Remove) Single-Value User Profile Properties
+                //Update(Remove) Single-Value User Profile Properties or
+                //Update(Remove) Can be used to remove PII data(for eg. Email,Phone,Name), locally
                 cleverTapAPI?.removeValueForKey("Customer Type")
+//                cleverTapAPI?.removeValueForKey("Email")
+//                cleverTapAPI?.removeValueForKey("Phone")
+//                cleverTapAPI?.removeValueForKey("Name")
             }
             "14" -> {
                 // Update(Replace) Multi-Value property
@@ -143,16 +148,17 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
             "111" -> {
                 // onUserLogin
                 val newProfile = HashMap<String, Any>()
-                var n = (0..10_000).random()
-                var p = (10_000..99_999).random()
-                newProfile["Name"] = "Don Joe $n}" // String
+                val n = (0..10_000).random()
+                val p = (10_000..99_999).random()
+                newProfile["Name"] = "Don Joe $n" // String
                 newProfile["Email"] = "donjoe$n@gmail.com" // Email address of the user
                 newProfile["Phone"] = "+141566$p" // Phone (with the country code, starting with +)
+                newProfile["Identity"] = "00002" // Identity of the user
                 // add any other key value pairs.....
                 cleverTapAPI?.onUserLogin(newProfile)
             }
             "20" -> {
-                // Open Inbox
+                // Open Inbox(Customised, with tabs)
                 val inboxTabs =
                     arrayListOf("Promotions", "Offers", "Others")//Anything after the first 2 will be ignored
                 CTInboxStyleConfig().apply {
@@ -170,18 +176,35 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                     cleverTapAPI?.showAppInbox(this) //Opens activity With Tabs
                 }
             }
-            "21" -> println("Total inbox message count = ${cleverTapAPI?.inboxMessageCount}") // show total inbox message count
-            "22" -> println("Unread inbox message count = ${cleverTapAPI?.inboxMessageUnreadCount}") // show unread inbox message count
-            "23" ->  // All inbox messages
+            "21" -> {
+                // Open Inbox(Customised, without tabs)
+                CTInboxStyleConfig().apply {
+                    tabBackgroundColor = "#FF0000"
+                    selectedTabIndicatorColor = "#0000FF"
+                    selectedTabColor = "#000000"
+                    unselectedTabColor = "#FFFFFF"
+                    backButtonColor = "#FF0000"
+                    navBarTitleColor = "#FF0000"
+                    navBarTitle = "MY INBOX"
+                    navBarColor = "#FFFFFF"
+                    inboxBackgroundColor = "#00FF00"
+                    cleverTapAPI?.showAppInbox(this) //Opens activity Without Tabs
+                }
+            }
+
+
+            "22" -> println("Total inbox message count = ${cleverTapAPI?.inboxMessageCount}") // show total inbox message count
+            "23" -> println("Unread inbox message count = ${cleverTapAPI?.inboxMessageUnreadCount}") // show unread inbox message count
+            "24" ->  // All inbox messages
                 cleverTapAPI?.allInboxMessages?.forEach {
                     println("All inbox messages ID = ${it.messageId}")
                 }
 
-            "24" ->  // All unread inbox messages
+            "25" ->  // All unread inbox messages
                 cleverTapAPI?.unreadInboxMessages?.forEach {
                     println("All unread inbox messages ID = ${it.messageId}")
                 }
-            "25" -> {
+            "26" -> {
                 val firstMessageId = cleverTapAPI?.allInboxMessages?.firstOrNull()?.messageId
                 //Get message object belonging to the given message id only. Message id should be a String
                 firstMessageId?.also {
@@ -189,7 +212,7 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                     println("inboxMessage For Id $it = ${inboxMessageForId?.data}")
                 } ?: println("inboxMessage Id is null")
             }
-            "26" -> {
+            "27" -> {
                 val firstMessageId = cleverTapAPI?.allInboxMessages?.firstOrNull()?.messageId
                 //Delete message object belonging to the given message id only. Message id should be a String
                 firstMessageId?.also {
@@ -197,7 +220,7 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                     println("Deleted inboxMessage For Id = $it")
                 } ?: println("inboxMessage Id is null")
             }
-            "27" -> {
+            "28" -> {
                 val firstMessage = cleverTapAPI?.allInboxMessages?.firstOrNull()
                 //Delete message object belonging to the given CTInboxMessage.
                 firstMessage?.also {
@@ -205,7 +228,7 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                     println("Deleted inboxMessage = ${it.messageId}")
                 } ?: println("inboxMessage is null")
             }
-            "28" -> {
+            "29" -> {
                 val firstMessageId = cleverTapAPI?.unreadInboxMessages?.firstOrNull()?.messageId
                 //Mark Message as Read. Message id should be a String
                 firstMessageId?.also {
@@ -213,7 +236,7 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                     println("Marked Message as Read For Id = $it")
                 } ?: println("inboxMessage Id is null")
             }
-            "29" -> {
+            "210" -> {
                 val firstMessage = cleverTapAPI?.unreadInboxMessages?.firstOrNull()
                 //Mark message as Read. Message should object of CTInboxMessage
                 firstMessage?.also {
@@ -221,7 +244,7 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                     println("Marked Message as Read = ${it.messageId}")
                 } ?: println("inboxMessage is null")
             }
-            "210" -> {
+            "211" -> {
                 val firstMessageId = cleverTapAPI?.allInboxMessages?.firstOrNull()?.messageId
                 //Raise Notification Viewed event for Inbox Message. Message id should be a String
                 firstMessageId?.also {
@@ -229,7 +252,7 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                     println("Raised Notification Viewed event For Id = $it")
                 } ?: println("inboxMessage Id is null")
             }
-            "211" -> {
+            "212" -> {
                 val firstMessageId = cleverTapAPI?.allInboxMessages?.firstOrNull()?.messageId
                 //Raise Notification Clicked event for Inbox Message. Message id should be a String
                 firstMessageId?.also {
@@ -316,6 +339,117 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
             "916"-> cleverTapAPI?.pushEvent("Send Input Box CTA DOC false")
             "917"-> cleverTapAPI?.pushEvent("Send Input Box Reminder DOC true")
             "918"-> cleverTapAPI?.pushEvent("Send Input Box Reminder DOC false")
+            "919"-> cleverTapAPI?.pushEvent("Send Three CTA Notification")
+            "100"-> {
+                val builder = CTLocalInApp.builder()
+                    .setInAppType(CTLocalInApp.InAppType.HALF_INTERSTITIAL)
+                    .setTitleText("Get Notified")
+                    .setMessageText("Please enable notifications on your device to use Push Notifications.")
+                    .followDeviceOrientation(true)
+                    .setPositiveBtnText("Allow")
+                    .setNegativeBtnText("Cancel")
+                    .setBackgroundColor(Constants.WHITE)
+                    .setBtnBorderColor(Constants.BLUE)
+                    .setTitleTextColor(Constants.BLUE)
+                    .setMessageTextColor(Constants.BLACK)
+                    .setBtnTextColor(Constants.WHITE)
+                    .setBtnBackgroundColor(Constants.BLUE)
+                    .build()
+                cleverTapAPI?.promptPushPrimer(builder)
+            }
+
+            "101"->{
+                val builder = CTLocalInApp.builder()
+                    .setInAppType(CTLocalInApp.InAppType.HALF_INTERSTITIAL)
+                    .setTitleText("Get Notified")
+                    .setMessageText("Please enable notifications on your device to use Push Notifications.")
+                    .followDeviceOrientation(true)
+                    .setPositiveBtnText("Allow")
+                    .setNegativeBtnText("Cancel")
+                    .setBackgroundColor(Constants.WHITE)
+                    .setBtnBorderColor(Constants.BLUE)
+                    .setTitleTextColor(Constants.BLUE)
+                    .setMessageTextColor(Constants.BLACK)
+                    .setBtnTextColor(Constants.WHITE)
+                    .setImageUrl("https://icons.iconarchive.com/icons/treetog/junior/64/camera-icon.png")
+                    .setBtnBackgroundColor(Constants.BLUE)
+                    .build()
+                cleverTapAPI?.promptPushPrimer(builder)
+            }
+
+            "102"->{
+                val builder = CTLocalInApp.builder()
+                    .setInAppType(CTLocalInApp.InAppType.HALF_INTERSTITIAL)
+                    .setTitleText("Get Notified")
+                    .setMessageText("Please enable notifications on your device to use Push Notifications.")
+                    .followDeviceOrientation(true)
+                    .setPositiveBtnText("Allow")
+                    .setNegativeBtnText("Cancel")
+                    .setBackgroundColor(Constants.WHITE)
+                    .setBtnBorderColor(Constants.BLUE)
+                    .setTitleTextColor(Constants.BLUE)
+                    .setMessageTextColor(Constants.BLACK)
+                    .setBtnTextColor(Constants.WHITE)
+                    .setBtnBackgroundColor(Constants.BLUE)
+                    .setFallbackToSettings(true)
+                    .build()
+                cleverTapAPI?.promptPushPrimer(builder)
+
+            }
+
+            "103"->{
+                val builder = CTLocalInApp.builder()
+                    .setInAppType(CTLocalInApp.InAppType.ALERT)
+                    .setTitleText("Get Notified")
+                    .setMessageText("Enable Notification permission")
+                    .followDeviceOrientation(true)
+                    .setPositiveBtnText("Allow")
+                    .setNegativeBtnText("Cancel")
+                    .build()
+                cleverTapAPI?.promptPushPrimer(builder)
+            }
+
+            "104"->{
+                val builder = CTLocalInApp.builder()
+                    .setInAppType(CTLocalInApp.InAppType.ALERT)
+                    .setTitleText("Get Notified")
+                    .setMessageText("Enable Notification permission")
+                    .followDeviceOrientation(false)
+                    .setPositiveBtnText("Allow")
+                    .setNegativeBtnText("Cancel")
+                    .build()
+                cleverTapAPI?.promptPushPrimer(builder)
+            }
+
+            "105"->{
+                val builder = CTLocalInApp.builder()
+                    .setInAppType(CTLocalInApp.InAppType.ALERT)
+                    .setTitleText("Get Notified")
+                    .setMessageText("Enable Notification permission")
+                    .followDeviceOrientation(true)
+                    .setPositiveBtnText("Allow")
+                    .setNegativeBtnText("Cancel")
+                    .setFallbackToSettings(true)
+                    .build()
+                cleverTapAPI?.promptPushPrimer(builder)
+            }
+
+            "106"->{
+                if (cleverTapAPI?.isPushPermissionGranted == false) {
+                    cleverTapAPI.promptForPushPermission(false)
+                }else{
+                    Log.v("HomeScreenViewModel","Notification permission is already granted.")
+                }
+            }
+
+            "107"->{
+                if (cleverTapAPI?.isPushPermissionGranted == false) {
+                    cleverTapAPI.promptForPushPermission(true)
+                }else{
+                    Log.v("HomeScreenViewModel","Notification permission is already granted.")
+                }
+            }
+
             //"60" -> webViewClickListener?.onWebViewClick()
 
         }

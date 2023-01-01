@@ -39,10 +39,38 @@ Click on [Mi Push Console](http://admin.xmpush.global.xiaomi.com/) and click on 
 ## 🚀 Integration
 [(Back to top)](#-table-of-contents)
 
-* Add the CleverTap Xiaomi Push dependency in app’s `build.gradle`
+* Download the Mi push Library from [here](https://github.com/CleverTap/clevertap-android-sdk/releases/tag/corev4.7.0_xpsv1.5.2_geofencev1.2.0_hmsv1.3.2_ptv1.0.6) and add it in your app's lib folder (`app/libs`)
+
+* If you are using obfuscation for your builds, you might need to add the following lines in proguard rules, as required by [Xiaomi SDK](https://dev.mi.com/console/doc/detail?pId=1244):
+
+```text
+#Change xxx.DemoMessageRreceiver to the full class name defined in your app
+-keep class xxx.DemoMessageReceiver {*;}
+
+#SDK has been obfuscated and compressed to avoid class not found error due to re-obfuscation.
+-keep class com.xiaomi.**
+
+#If the compiling Android version you are using is 23, you can prevent getting a false warning which makes it impossible to compile.
+-dontwarn com.xiaomi.push.**
+
+-keep class com.xiaomi.mipush.sdk.MiPushMessage {*;}
+-keep class com.xiaomi.mipush.sdk.MiPushCommandMessage {*;}
+-keep class com.xiaomi.mipush.sdk.PushMessageReceiver {*;}
+-keep class com.xiaomi.mipush.sdk.MessageHandleService {*;}
+-keep class com.xiaomi.push.service.XMJobService {*;}
+-keep class com.xiaomi.push.service.XMPushService {*;}
+-keep class com.xiaomi.mipush.sdk.PushMessageHandler {*;}
+-keep class com.xiaomi.push.service.receivers.NetworkStatusReceiver {*;}
+-keep class com.xiaomi.push.service.receivers.PingReceiver {*;}
+-keep class com.xiaomi.mipush.sdk.NotificationClickedActivity {*;}
+```
+
+
+* Add the CleverTap Xiaomi Push dependency and Mi Push Dependency in your app’s `build.gradle`
 
 ```groovy
     implementation "${ext.clevertap_xiaomi_sdk}${ext['version.com.clevertap.android..clevertap-xiaomi-sdk']}"
+    implementation fileTree(include: ["*.jar", "*.aar"], dir: "libs")// or implementation files("libs/MiPush_SDK_Client_5_0_6-G_3rd.aar") for including only MiPush_SDK_Client_5_0_6 aar file
 ```
 
 * Add the following to your app’s `AndroidManifest.xml` file
@@ -67,3 +95,18 @@ Click on [Mi Push Console](http://admin.xmpush.global.xiaomi.com/) and click on 
 <string name="xiaomi_app_id">Your Xiaomi App ID</string>
  
 ```
+
+* From CleverTap Android SDK v4.5.0 and CleverTap Xiaomi Push SDK v1.4.0 onwards
+    * Method to change credentials for the CleverTap Xiaomi Push SDK `CleverTapAPI.changeXiaomiCredentials(String xiaomiAppID, String xiaomiAppKey)`. This needs to be added before `CleverTapAPI` instance creation.
+
+    * Method to run Xiaomi Push SDK on all devices, Xiaomi only devices or turn off push on all devices.
+
+    ```java
+
+    // possible values are PushConstants.ALL_DEVICES, PushConstants.XIAOMI_MIUI_DEVICES, PushConstants.NO_DEVICES
+    // default is PushConstants.ALL_DEVICES
+    CleverTapAPI.enableXiaomiPushOn(PushConstants.XIAOMI_MIUI_DEVICES);
+
+    ```
+
+    This needs to be added before `CleverTapAPI` instance creation.

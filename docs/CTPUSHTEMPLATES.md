@@ -20,8 +20,8 @@ CleverTap Push Templates SDK helps you engage with your users using fancy push n
 1. Add the dependencies to the `build.gradle`
 
 ```groovy
-implementation "com.clevertap.android:push-templates:1.0.0"
-implementation "com.clevertap.android:clevertap-android-sdk:4.4.0" // 4.4.0 and above
+implementation "com.clevertap.android:push-templates:1.0.7"
+implementation "com.clevertap.android:clevertap-android-sdk:4.7.2" // 4.4.0 and above
 ```
 
 2. Add the following line to your Application class before the `onCreate()`
@@ -44,7 +44,7 @@ public class PushTemplateMessagingService extends FirebaseMessagingService {
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
         CTFcmMessageHandler()
-                .createNotification(getApplicationContext(), message);
+                .createNotification(getApplicationContext(), remoteMessage);
     }
     @Override
     public void onNewToken(@NonNull final String s) {
@@ -184,6 +184,8 @@ Five icons template is a sticky push notification with no text, just 5 icons and
 
 If at least 3 icons are not retrieved, the library doesn't render any notification. The bifurcation of each CTA is captured in the event Notification Clicked with in the property `wzrk_c2a`.
 
+If user clicks on any notification area except the five & close icons, then by default it will launch an activity intent.
+
 <img src="https://github.com/CleverTap/clevertap-android-sdk/blob/master/static/fiveicon.png" width="412" height="100">
 
 ## Timer Template
@@ -217,6 +219,34 @@ To set the CTAs use the Advanced Options when setting up the campaign on the das
 Template Key | Required | Value
 ---:|:---:|:---
 pt_dismiss_on_click | Optional | Dismisses the notification without opening the app
+
+*Note If `pt_dismiss_on_click` is false we'll have to add the below code to not dismiss the
+notification for Android 12 and above
+
+    fun dismissNotification(intent: Intent?, applicationContext: Context){
+        intent?.extras?.apply {
+            var autoCancel = true
+            var notificationId = -1
+
+            getString("actionId")?.let {
+                Log.d("ACTION_ID", it)
+                autoCancel = getBoolean("autoCancel", true)
+                notificationId = getInt("notificationId", -1)
+            }
+            /**
+             * If using InputBox template, add ptDismissOnClick flag to not dismiss notification
+             * if pt_dismiss_on_click is false in InputBox template payload. Alternatively if normal
+             * notification is raised then we dismiss notification.
+             */
+            val ptDismissOnClick = intent.extras!!.getString(PTConstants.PT_DISMISS_ON_CLICK,"")
+
+            if (autoCancel && notificationId > -1 && ptDismissOnClick.isNullOrEmpty()) {
+                val notifyMgr: NotificationManager =
+                    applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                notifyMgr.cancel(notificationId)
+            }
+        }
+    }
 
 ### CTAs with Remind Later option
 
@@ -339,6 +369,7 @@ Rating Template Keys | Required | Description
 pt_id | Required  | Value - `pt_rating`
 pt_title | Required  | Title
 pt_msg | Required  | Message
+pt_big_img | Optional | Image
 pt_msg_summary | Optional | Message line when Notification is expanded
 pt_subtitle | Optional | Subtitle
 pt_default_dl | Required  | Default Deep Link for Push Notification
@@ -364,7 +395,7 @@ pt_msg | Required  | Message
 pt_subtitle | Optional  | Subtitle
 pt_img1 | Required  | Image One
 pt_img2 | Required  | Image Two
-pt_img3 | Optional  | Image Three
+pt_img3 | Required  | Image Three
 pt_bt1 | Required  | Big text for first image
 pt_bt2 | Required  | Big text for second image
 pt_bt3 | Required  | Big text for third image
@@ -421,8 +452,8 @@ pt_big_img | Optional | Image
 pt_big_img_alt | Optional | Image to show when timer expires
 pt_bg | Required | Background Color in HEX
 pt_chrono_title_clr | Optional | Color for timer text in HEX
-pt_timer_threshold | Required | Timer duration in seconds (minimum 10)
-pt_timer_end | Required | Epoch Timestamp to countdown to (for example, $D_1595871380 or 1595871380). Not needed if pt_timer_threshold is specified.
+pt_timer_threshold | Required | Timer duration in seconds (minimum 10). Will be given higher priority. 
+pt_timer_end | Optional | Epoch Timestamp to countdown to (for example, $D_1595871380 or 1595871380). Not needed if pt_timer_threshold is specified.
 pt_title_clr | Optional | Title Color in HEX
 pt_msg_clr | Optional | Message Color in HEX
 pt_small_icon_clr | Optional | Small Icon Color in HEX
@@ -490,18 +521,21 @@ pt_json | Optional | Above keys in JSON format
 
 Template | Aspect Ratios | File Type
   ---:|:---:|:--- 
-Basic | 4:3 or 2:1 | .JPG
-Auto Carousel | 2:1 (Android 11 & 12) and 4:3 (Below Android 11) | .JPG
-Manual Carousel | 2:1 (Android 11 & 12) and 4:3 (Below Android 11) | .JPG
-Rating | 4:3 (Android 11 & 12) and 2:1 (Below Android 11) | .JPG
+Basic | 4:3 or 3:2 or 2:1 | .JPG
+Auto Carousel | 3:2 (Android 11 & 12) and 4:3 (Below Android 11) | .JPG
+Manual Carousel | 3:2 (Android 11 & 12) and 4:3 (Below Android 11) | .JPG
+Manual Carousel-FilmStrip| 1:1 | .JPG
+Rating | 4:3 | .JPG
 Five Icon | 1:1 | .JPG or .PNG
-Zero Bezel | 4:3 or 2:1 | .JPG
-Timer | 4:3 or 2:1 | .JPG
+Zero Bezel | 4:3 or 3:2 or 2:1 | .JPG
+Timer | 3:2 (Android 11 & 12) and 4:3 (Below Android 11) | .JPG
 Input Box | 4:3 or 2:1 | .JPG
 Product Catalog | 1:1 | .JPG
 
-* For Auto and Manual Carousel the image dimensions should not exceed more than 850x425 for Android 11 and Android 12 devices and with 2:1 image aspect ratio
+* For Auto and Manual Carousel the image dimensions should not exceed more than 840x560 for Android 11 and Android 12 devices and with 3:2 image aspect ratio
 * For Product Catalog image aspect ratio should be 1:1 and image size should be less than 80kb for Android 11 and Android 12 devices
+* For Zero Bezel it's recommended that if your image has any text it should be present in the middle of the image for Android 12+ devices. 
+* For Android 12+ devices it's recommended that if your image has any text it should be present in the middle of the image.
 
 ## Android 12 Trampoline restrictions
 

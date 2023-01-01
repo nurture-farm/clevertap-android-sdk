@@ -25,6 +25,7 @@ import com.clevertap.android.sdk.CTInboxStyleConfig;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.CleverTapInstanceConfig;
 import com.clevertap.android.sdk.Constants;
+import com.clevertap.android.sdk.DidClickForHardPermissionListener;
 import com.clevertap.android.sdk.Logger;
 import com.clevertap.android.sdk.R;
 import com.clevertap.android.sdk.Utils;
@@ -42,7 +43,7 @@ public class CTInboxListViewFragment extends Fragment {
     interface InboxListener {
 
         void messageDidClick(Context baseContext, CTInboxMessage inboxMessage, Bundle data,
-                HashMap<String, String> keyValue);
+                HashMap<String, String> keyValue,boolean isBodyClick);
 
         void messageDidShow(Context baseContext, CTInboxMessage inboxMessage, Bundle data);
     }
@@ -58,6 +59,8 @@ public class CTInboxListViewFragment extends Fragment {
     MediaPlayerRecyclerView mediaRecyclerView;
 
     RecyclerView recyclerView;
+    private  CTInboxMessageAdapter inboxMessageAdapter;
+
 
     CTInboxStyleConfig styleConfig;
 
@@ -67,6 +70,8 @@ public class CTInboxListViewFragment extends Fragment {
 
     private int tabPosition;
 
+    private DidClickForHardPermissionListener didClickForHardPermissionListener;
+
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
@@ -75,15 +80,26 @@ public class CTInboxListViewFragment extends Fragment {
             config = bundle.getParcelable("config");
             styleConfig = bundle.getParcelable("styleConfig");
             tabPosition = bundle.getInt("position", -1);
-            final String filter = bundle.getString("filter", null);
+            updateInboxMessages();
             if (context instanceof CTInboxActivity) {
                 setListener((CTInboxListViewFragment.InboxListener) getActivity());
             }
-            CleverTapAPI cleverTapAPI = CleverTapAPI.instanceWithConfig(getActivity(), config);
-            if (cleverTapAPI != null) {
-                ArrayList<CTInboxMessage> allMessages = cleverTapAPI.getAllInboxMessages();
-                inboxMessages = filter != null ? filterMessages(allMessages, filter) : allMessages;
+            /*Initializes the below listener only when inbox payload has CTInbox activity as their host activity
+            when requesting permission for notification.*/
+            if (context instanceof DidClickForHardPermissionListener) {
+                didClickForHardPermissionListener = (DidClickForHardPermissionListener) context;
             }
+        }
+    }
+    private void updateInboxMessages(){
+        Bundle bundle = getArguments();
+        if(bundle==null) return;
+        final String filter = bundle.getString("filter", null);
+        CleverTapAPI cleverTapAPI = CleverTapAPI.instanceWithConfig(getActivity(), config);
+        if (cleverTapAPI != null) {
+            Logger.v( "CTInboxListViewFragment:onAttach() called with: tabPosition = [" + tabPosition + "], filter = [" + filter + "]");
+            ArrayList<CTInboxMessage> allMessages = cleverTapAPI.getAllInboxMessages();
+            inboxMessages = filter != null ? filterMessages(allMessages, filter) : allMessages;
         }
     }
 
@@ -106,7 +122,7 @@ public class CTInboxListViewFragment extends Fragment {
         noMessageView.setVisibility(View.GONE);
 
         final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
-        final CTInboxMessageAdapter inboxMessageAdapter = new CTInboxMessageAdapter(inboxMessages, this);
+        inboxMessageAdapter= new CTInboxMessageAdapter(inboxMessages, this);
 
         if (haveVideoPlayerSupport) {
             mediaRecyclerView = new MediaPlayerRecyclerView(getActivity());
@@ -202,12 +218,11 @@ public class CTInboxListViewFragment extends Fragment {
         }
     }
 
-    void didClick(Bundle data, int position, HashMap<String, String> keyValuePayload) {
+    void didClick(Bundle data, int position, HashMap<String, String> keyValuePayload, boolean isInboxMessageBodyClick) {
         CTInboxListViewFragment.InboxListener listener = getListener();
         if (listener != null) {
             //noinspection ConstantConditions
-            listener.messageDidClick(getActivity().getBaseContext(), inboxMessages.get(position), data,
-                    keyValuePayload);
+            listener.messageDidClick(getActivity().getBaseContext(), inboxMessages.get(position), data, keyValuePayload, isInboxMessageBodyClick);
         }
     }
 
@@ -215,6 +230,7 @@ public class CTInboxListViewFragment extends Fragment {
     void didShow(Bundle data, int position) {
         CTInboxListViewFragment.InboxListener listener = getListener();
         if (listener != null) {
+            Logger.v("CTInboxListViewFragment:didShow() called with: data = [" + data + "], position = [" + position + "]");
             //noinspection ConstantConditions
             listener.messageDidShow(getActivity().getBaseContext(), inboxMessages.get(position), data);
         }
@@ -257,8 +273,7 @@ public class CTInboxListViewFragment extends Fragment {
         this.mediaRecyclerView = mediaRecyclerView;
     }
 
-    void handleClick(int position, String buttonText, JSONObject jsonObject,
-            HashMap<String, String> keyValuePayload) {
+    void handleClick(int position, String buttonText, JSONObject jsonObject, HashMap<String, String> keyValuePayload, boolean isInboxMessageBodyClick) {
         try {
             Bundle data = new Bundle();
             JSONObject wzrkParams = inboxMessages.get(position).getWzrkParams();
@@ -273,7 +288,18 @@ public class CTInboxListViewFragment extends Fragment {
             if (buttonText != null && !buttonText.isEmpty()) {
                 data.putString("wzrk_c2a", buttonText);
             }
-            didClick(data, position, keyValuePayload);
+            didClick(data, position, keyValuePayload,isInboxMessageBodyClick);
+
+            String isRequestForPermissionStr = inboxMessages.get(position).getInboxMessageContents().
+                    get(0).getLinktype(jsonObject);
+            if (isRequestForPermissionStr.contains(Constants.KEY_REQUEST_FOR_NOTIFICATION_PERMISSION)
+                && didClickForHardPermissionListener != null){
+                boolean isFallbackSettings = inboxMessages.get(position).
+                        getInboxMessageContents().get(0).isFallbackSettingsEnabled(jsonObject);
+                didClickForHardPermissionListener.didClickForHardPermissionWithFallbackSettings(isFallbackSettings);
+                return;
+            }
+
             boolean isKVButton = keyValuePayload != null && !keyValuePayload.isEmpty();
             if (jsonObject != null) {
                 if (isKVButton || inboxMessages.get(position).getInboxMessageContents().get(0).getLinktype(jsonObject)
@@ -298,7 +324,7 @@ public class CTInboxListViewFragment extends Fragment {
         }
     }
 
-    void handleViewPagerClick(int position, int viewPagerPosition) {
+    void handleViewPagerClick(int position, int viewPagerPosition,boolean isInboxMessageBodyClick) {
         try {
             Bundle data = new Bundle();
             JSONObject wzrkParams = inboxMessages.get(position).getWzrkParams();
@@ -309,7 +335,7 @@ public class CTInboxListViewFragment extends Fragment {
                     data.putString(keyName, wzrkParams.getString(keyName));
                 }
             }
-            didClick(data, position, null);
+            didClick(data, position, null,isInboxMessageBodyClick);
             String actionUrl = inboxMessages.get(position).getInboxMessageContents().get(viewPagerPosition)
                     .getActionUrl();
             fireUrlThroughIntent(actionUrl);

@@ -1,5 +1,6 @@
 package com.clevertap.android.sdk.network;
 
+import static com.clevertap.android.sdk.Utils.getSCDomain;
 import static com.clevertap.android.sdk.utils.CTJsonConverter.getRenderedTargetList;
 
 import android.annotation.SuppressLint;
@@ -23,6 +24,7 @@ import com.clevertap.android.sdk.StorageHelper;
 import com.clevertap.android.sdk.db.BaseDatabaseManager;
 import com.clevertap.android.sdk.db.QueueCursor;
 import com.clevertap.android.sdk.events.EventGroup;
+import com.clevertap.android.sdk.interfaces.NotificationRenderedListener;
 import com.clevertap.android.sdk.login.IdentityRepoFactory;
 import com.clevertap.android.sdk.response.ARPResponse;
 import com.clevertap.android.sdk.response.BaseResponse;
@@ -46,6 +48,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.security.SecureRandom;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -241,14 +244,17 @@ public class NetworkManager extends BaseNetworkManager {
     @Override
     public void initHandshake(final EventGroup eventGroup, final Runnable handshakeSuccessCallback) {
         responseFailureCount = 0;
-        setDomain(context, null);
         performHandshakeForDomain(context, eventGroup, handshakeSuccessCallback);
     }
 
     @Override
     public boolean needsHandshakeForDomain(final EventGroup eventGroup) {
         final String domain = getDomainFromPrefsOrMetadata(eventGroup);
-        return domain == null || responseFailureCount > 5;
+        boolean needHandshakeDueToFailure = responseFailureCount > 5;
+        if (needHandshakeDueToFailure) {
+            setDomain(context, null);
+        }
+        return domain == null || needHandshakeDueToFailure;
     }
 
     @SuppressLint("CommitPrefEdits")
@@ -403,6 +409,11 @@ public class NetworkManager extends BaseNetworkManager {
 
             JSONObject appFields = deviceInfo.getAppLaunchedFields();
             header.put("af", appFields);
+
+            HashMap<String, Integer> allCustomSdkVersions = coreMetaData.getAllCustomSdkVersions();
+            for (Entry<String, Integer> entries : allCustomSdkVersions.entrySet()) {
+                header.put(entries.getKey(), entries.getValue());
+            }
 
             long i = getI();
             if (i > 0) {
@@ -654,6 +665,36 @@ public class NetworkManager extends BaseNetworkManager {
             setLastRequestTimestamp(getCurrentRequestTimestamp());
             setFirstRequestTimestampIfNeeded(getCurrentRequestTimestamp());
 
+            if (eventGroup == EventGroup.PUSH_NOTIFICATION_VIEWED) {
+                // get last push id from queue
+
+                JSONObject notification = queue.getJSONObject(queue.length() - 1).optJSONObject("evtData");
+                if (notification != null) {
+                    String lastPushInQueue = notification.optString(Constants.WZRK_PUSH_ID);
+                    /**
+                     * Check if, sent push notification viewed event is for latest push notification or older
+                     * If it's for latest push which just came on device then give render callback to listeners
+                     * This will make sure that callback will be given only when viewed event for latest push on device is
+                     * sent to BE.
+                     */
+                    if (coreMetaData.getLastNotificationId() != null && coreMetaData.getLastNotificationId()
+                            .equals(lastPushInQueue)) {
+                        NotificationRenderedListener notificationRenderedListener
+                                = callbackManager.getNotificationRenderedListener();
+
+                        logger.verbose(config.getAccountId(),
+                                "push notification viewed event sent successfully for push id = " + lastPushInQueue);
+                        if (notificationRenderedListener != null) {
+                            notificationRenderedListener.onNotificationRendered(true);
+                        }
+
+                    }
+                }
+
+                logger.verbose(config.getAccountId(),
+                        "push notification viewed event sent successfully");
+
+            }
             logger.debug(config.getAccountId(), "Queue sent successfully");
 
             responseFailureCount = 0;
@@ -682,6 +723,14 @@ public class NetworkManager extends BaseNetworkManager {
         logger.verbose(config.getAccountId(), "Setting domain to " + domainName);
         StorageHelper.putString(context, StorageHelper.storageKeyWithSuffix(config, Constants.KEY_DOMAIN_NAME),
                 domainName);
+
+        if (callbackManager.getSCDomainListener() != null) {
+            if (domainName != null) {
+                callbackManager.getSCDomainListener().onSCDomainAvailable(getSCDomain(domainName));
+            } else {
+                callbackManager.getSCDomainListener().onSCDomainUnavailable();
+            }
+        }
     }
 
     void setFirstRequestTimestampIfNeeded(int ts) {

@@ -1,10 +1,76 @@
 ## CleverTap Android SDK CHANGE LOG
 
+### Version 4.7.2 (December 16, 2022)
+* Fixes a crash (`ClassCastException`) in header/footer InApp templates.
+
+### Version 4.7.1 (December 5, 2022)
+* Fixes ANR on main thread for static initialization of `SimpleDateFormat()`.
+* Add Proguard rules to keep `CREATOR` instance for Parcelable classes to prevent `ClassNotFoundException` when unmarshalling: `androidx.fragment.app.FragmentManagerState`
+* Made calls to `getInstallReferrer()` async to prevent ANR when called on main thread.
+* Used `ConcurrentHashMap` instead of `HashMap` for storing `CleverTapAPI` instances to prevent ConcurrentModificationException when trying to access the instances concurrently.
+* Made calls to `findCTPushProvider()` and `findCustomEnabledPushTypes()` async to prevent ANR when called on main thread.
+* Renames `setPushPermissionNotificationResponseListener(PushPermissionResponseListener)` to `registerPushPermissionNotificationResponseListener(PushPermissionResponseListener)` . Each `PushPermissionResponseListener` instance passed in this method is now maintained in a list of the `PushPermissionResponseListener` type and the Push Primer result is notified to all the elements of this list.
+* Adds `unregisterPushPermissionNotificationResponseListener(PushPermissionResponseListener)` method in `CleverTapAPI` class to unregister the  `PushPermissionResponseListener` instance to stop observing the  Push Primer result.
+* Use v4.7.2, this version contains a bug which causes a crash (`ClassCastException`) in header/footer InApp templates.
+
+
+### Version 4.7.0 (November 1, 2022)
+* Adds below new public APIs for supporting [Android 13 notification runtime permission](https://developer.android.com/develop/ui/views/notifications/notification-permission)
+  * `isPushPermissionGranted()` [Usage can be found here](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/EXAMPLES.md#check-the-status-of-notification-permission-whether-its-granted-or-denied)
+  * `promptPushPrimer(JSONObject)` [Usage can be found here](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/EXAMPLES.md#push-primer-android-13-notification-runtime-permission)
+  * `promptForPushPermission(boolean showFallbackSettings)` [Usage can be found here](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/EXAMPLES.md#call-android-os-runtime-notification-dialog-without-using-push-primer)
+* New `CTLocalInApp` builder class available to create half-interstitial & alert local in-apps to request notification permission [Usage can be found here](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/EXAMPLES.md#ctlocalinapp-builder-methods-description)
+* New callback `PushPermissionResponseListener` available which returns after user Allows/Denies notification permission [Usage can be found here](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/EXAMPLES.md#available-callbacks-for-push-primer)
+* From 4.7.0+ existing callback `InAppNotificationListener` will now have `onShow(CTInAppNotification)` method which needs to implemented
+* Minimum Android SDK version bumped to API 19 (Android 4.4)
+* Use v4.7.2, this version contains a bug which causes a crash (`ClassCastException`) in header/footer InApp templates.
+
+### Version 4.6.6 (October 31, 2022)
+* Fixes App Inbox bug where an Inbox message's video would not play when new Inbox messages were available
+
+### Version 4.6.5 (October 21, 2022)
+* Allows more special characters when setting custom CleverTap ID
+
+### Version 4.6.4 (October 11, 2022)
+* Bug fixes and improvements
+
+### Version 4.6.3 (September 20, 2022)
+* Fix crash in App inbox when No additional tabs are used .
+
+### Version 4.6.2 (September 13, 2022)
+* Support for exoplayer [`v2.17.1`](https://github.com/google/ExoPlayer/releases/tag/r2.17.1) . Note : this upgrade will result in minor ui changes for interstitial in app and inbox notifications that uses exoplayer
+* Note: Kindly upgrade to version CleverTap Android SDK v4.6.3 and above if you face any issues with app inbox
+
+### Version 4.6.1 (September 6, 2022)
+* App inbox blue dot fix :  This release fixes the bug where new entries in inbox would continue showing blue dot when scrolled up and down . expected behaviour is to stop showing blue dot after 2 seconds.
+* App inbox onMessage Click Callback : user can now pass an `InboxMessageListener` in addition to `InboxMessageButtonListener` to receive inbox item click
+* Note: Kindly upgrade to version CleverTap Android SDK v4.6.3 and above if you face any issues with app inbox
+
+### Version 4.6.0 (August 4, 2022)
+* Improved push synchronization for multiple push services
+
+### Version 4.5.2 (July 22, 2022)
+* Fixes a bug for notification CTA deeplink for Android 12 and above devices - On clicking notification CTA, deeplink launches third party app instead of X app even though X app is capable of handling deeplink. For example, if X app is capable of handling https://google.com(sample link) but deeplink launches browser instead of X app.
+
+### Version 4.5.1 (July 12, 2022)
+* New Feature : You can now call `onUserLogin`, `incrementValue` and `decrementValue` method via WebView Interface.
+* Improvement : Updated SSL Pinning Certificates
+
+### Version 4.5.0 (June 3, 2022)
+* `removeValueForKey()` in `CleverTapAPI` can now remove PII data like Email, Phone and Date Of Birth.
+* Improved the `ActivityLifecycleCallback`’s `onPaused` logic so that it runs on the background thread to avoid any runtime issues. Fixes #221.
+* Adds support to change credentials for the CleverTap Xiaomi Push SDK using `changeXiaomiCredentials`. Contribution PR #269.
+* Adds support to enable/disable the CleverTap Xiaomi Push SDK using `enableXiaomiPushOn` method. CleverTap Xiaomi Push SDK can now be enabled/disabled for `ALL_DEVICES`, `XIAOMI_MIUI_DEVICES` and `NO_DEVICES`.
+* Adds analytics support for upcoming CleverTap Direct Call Android SDK.
+* Sets up CI/CD using Github Actions.
+Note : If you are facing `ClassNotFoundException` "org.jacoco.agent.rt.internal_28bab1d.Offline" after updating to 4.5.0, Please update the SDK to v4.5.1
+
 ### Version 4.4.0 (December 20, 2021)
-* Adds below new public APIs for smooth and easy integration of Custom Android Push Notifications Handling(FCM),Custom Push Amplification Handling and Push Templates.
+* Adds below new public APIs for smooth and easy integration of Custom Android Push Notifications Handling(FCM),Custom Push Amplification Handling and Push Templates
   * `CTFcmMessageHandler().createNotification(applicationContext, message)`
   * `CTFcmMessageHandler().processPushAmp(applicationContext, message)`
   * `CleverTapAPI.setNotificationHandler(notificationHandler)`
+* Adds support for Firebase Cloud Messaging v21 and above
 
 ### Version 4.3.1 (November 25, 2021)
 * Fixes a Strict Mode Read violation for low RAM devices
@@ -12,7 +78,7 @@
 ### Version 4.3.0 (November 2, 2021)
 * Adds support for [apps targeting Android 12 (API 31)](https://developer.android.com/about/versions/12/behavior-changes-12)
   This version is compatible with all new Android 12 changes like Notification Trampolines, Pending Intents Mutability and Safer Component Exporting.
-  For more information check out the [CleverTap documentation for Android 12 here](https://developer.clevertap.com/docs/android-12-changes)
+  For more information check out the [CleverTap documentation for Android 12 here](https://developer.clevertap.com/docs/android-push#android-12-changes)
 * Deprecated `CTPushNotificationReceiver` and `CTNotificationIntentService` as a part of Notification Trampoline restrictions in Android 12 (API 31)
 * Last version with support for custom FCM Sender ID for generating the FCM token
 * Fixes a bug where `UTM Visited` event was not being raised on click of a direct deep link
