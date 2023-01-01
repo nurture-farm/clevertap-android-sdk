@@ -308,7 +308,7 @@ public class NetworkManager extends BaseNetworkManager {
         this.currentRequestTimestamp = currentRequestTimestamp;
     }
 
-    String getDomainFromPrefsOrMetadata(final EventGroup eventGroup) {
+    public String getDomainFromPrefsOrMetadata(final EventGroup eventGroup) {
 
         try {
             final String region = config.getAccountRegion();
