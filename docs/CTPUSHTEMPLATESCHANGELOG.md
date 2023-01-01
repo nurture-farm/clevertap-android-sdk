@@ -1,5 +1,28 @@
 ## CleverTap Push Templates SDK CHANGE LOG
 
+### Version 1.0.5 (September 13, 2022)
+* fixes a bug on android 12 where push template notification header was not displaying subtitle text.
+
+### Version 1.0.4 (August 4, 2022)
+* Supports CleverTap Android SDK v4.6.0
+
+### Version 1.0.3 (July 22, 2022)
+* Fixes a bug for notification CTA deeplink for Android 12 and above devices - On clicking notification CTA, deeplink launches third party app instead of X app even though X app is capable of handling deeplink. For example, if X app is capable of handling https://google.com(sample link) but deeplink launches browser instead of X app.
+* Fixes push impression not raised bug for Timer template
+
+### Version 1.0.2 (April 26, 2022)
+* UI bug fixes for Push Notification metadata
+* Timer template fixes for `title`, `title_alt` along with `pt_big_img`, `pt_big_img_alt`
+* Small content view text cropping fixes for Android versions less than 23
+* Darker arrows for navigation in ManualCarousel & Filmstrip Carousel template
+* Fixes five icon template dismissible on multiple onClickListeners
+* Fixes UI issue when only 3 icons were configured in Five icon template
+* Fix validation for `deepLink(optional)` key in ZeroBezel template
+
+### Version 1.0.1 (March 2, 2022)
+* Improved image handling for Basic, AutoCarousel, ManualCarousel templates.
+* Allows either or both  `pt_timer_threshold` and `pt_timer_end` for Timer template.
+
 ### Version 1.0.0 (December 20, 2021)
 * Stable release! 🎉
 * Supports Xiaomi, Huawei notification messages out of the box

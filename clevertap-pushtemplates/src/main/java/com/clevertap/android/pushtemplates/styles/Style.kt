@@ -3,6 +3,7 @@ package com.clevertap.android.pushtemplates.styles
 import android.app.PendingIntent
 import android.content.Context
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.text.Html
 import android.widget.RemoteViews
@@ -28,6 +29,11 @@ abstract class Style(private var renderer: TemplateRenderer) {
         if (contentViewBig != null) {
             notificationBuilder.setCustomBigContentView(contentViewBig)
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            notificationBuilder.setSubText(renderer.pt_subtitle)
+        }
+
         return notificationBuilder.setSmallIcon(renderer.smallIcon)
             .setContentTitle(Html.fromHtml(pt_title))
             .setContentIntent(pIntent)
@@ -38,9 +44,9 @@ abstract class Style(private var renderer: TemplateRenderer) {
             .setOnlyAlertOnce(true)
     }
 
-    protected abstract fun makeSmallContentView(context: Context, renderer: TemplateRenderer): RemoteViews?
+    protected abstract fun makeSmallContentRemoteView(context: Context, renderer: TemplateRenderer): RemoteViews?
 
-    protected abstract fun makeBigContentView(context: Context, renderer: TemplateRenderer): RemoteViews?
+    protected abstract fun makeBigContentRemoteView(context: Context, renderer: TemplateRenderer): RemoteViews?
 
     protected abstract fun makePendingIntent(context: Context, extras: Bundle, notificationId: Int): PendingIntent?
 
@@ -51,7 +57,7 @@ abstract class Style(private var renderer: TemplateRenderer) {
         nb: NotificationCompat.Builder
     ): NotificationCompat.Builder {
         return setNotificationBuilderBasics(
-            nb, makeSmallContentView(context, renderer), makeBigContentView(context, renderer),
+            nb, makeSmallContentRemoteView(context, renderer), makeBigContentRemoteView(context, renderer),
             renderer.pt_title, makePendingIntent(context, extras, notificationId),
             makeDismissIntent(context, extras, notificationId)
         )

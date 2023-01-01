@@ -7,7 +7,6 @@ import android.content.Context;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
-
 import androidx.annotation.NonNull;
 import com.clevertap.android.sdk.displayunits.model.CleverTapDisplayUnit;
 import com.clevertap.android.sdk.events.BaseEventQueueManager;
@@ -629,6 +628,7 @@ public class AnalyticsManager extends BaseAnalyticsManager {
         } catch (Throwable ignored) {
             //no-op
         }
+        coreMetaData.setLastNotificationId(extras.getString(Constants.WZRK_PUSH_ID));
         baseEventQueueManager.queueEvent(context, event, Constants.NV_EVENT);
     }
 
@@ -799,6 +799,25 @@ public class AnalyticsManager extends BaseAnalyticsManager {
         } catch (Throwable t) {
             config.getLogger().verbose(config.getAccountId(), "Failed to push deep link", t);
         }
+    }
+
+    Future<?> raiseEventForDirectCall(String eventName, JSONObject dcEventProperties) {
+
+        Future<?> future = null;
+
+        JSONObject event = new JSONObject();
+        try {
+            event.put("evtName", eventName);
+            event.put("evtData", dcEventProperties);
+
+            future = baseEventQueueManager.queueEvent(context, event, Constants.RAISED_EVENT);
+        } catch (JSONException e) {
+            config.getLogger().debug(config.getAccountId(), Constants.LOG_TAG_DIRECT_CALL +
+                    "JSON Exception when raising Direct Call event "
+                    + eventName + " - " + e.getLocalizedMessage());
+        }
+
+        return future;
     }
 
     Future<?> raiseEventForGeofences(String eventName, JSONObject geofenceProperties) {
@@ -1060,7 +1079,7 @@ public class AnalyticsManager extends BaseAnalyticsManager {
             // push to server
             JSONObject commandObj = new JSONObject().put(command, value);
             JSONObject updateObj = new JSONObject().put(key, commandObj);
-            baseEventQueueManager.pushBasicProfile(updateObj);
+            baseEventQueueManager.pushBasicProfile(updateObj, false);
         } catch (Throwable t) {
             config.getLogger().verbose(config.getAccountId(), "Failed to update profile value for key "
                     + key, t);
@@ -1232,7 +1251,7 @@ public class AnalyticsManager extends BaseAnalyticsManager {
                 localDataStore.setProfileFields(fieldsToUpdateLocally);
             }
 
-            baseEventQueueManager.pushBasicProfile(customProfile);
+            baseEventQueueManager.pushBasicProfile(customProfile, false);
 
         } catch (Throwable t) {
             // Will not happen
@@ -1262,13 +1281,23 @@ public class AnalyticsManager extends BaseAnalyticsManager {
                 validationResultStack.pushValidationResult(vr);
             }
 
+            //If key contains "Identity" then do not remove from SQLDb and shared prefs
+            if (key.toLowerCase().contains("identity")) {
+                config.getLogger()
+                        .verbose(config.getAccountId(), "Cannot remove value for key " +
+                                key + " from user profile");
+                return;
+            }
+
             // remove from the local profile
             localDataStore.removeProfileField(key);
 
             // send the delete command
             JSONObject command = new JSONObject().put(Constants.COMMAND_DELETE, true);
             JSONObject update = new JSONObject().put(key, command);
-            baseEventQueueManager.pushBasicProfile(update);
+
+            //Set removeFromSharedPrefs to true to remove PII keys from shared prefs.
+            baseEventQueueManager.pushBasicProfile(update,true);
 
             config.getLogger()
                     .verbose(config.getAccountId(), "removing value for key " + key + " from user profile");
@@ -1338,7 +1367,7 @@ public class AnalyticsManager extends BaseAnalyticsManager {
             JSONObject fields = new JSONObject();
             fields.put(key, commandObj);
 
-            baseEventQueueManager.pushBasicProfile(fields);
+            baseEventQueueManager.pushBasicProfile(fields, false);
 
             config.getLogger()
                     .verbose(config.getAccountId(), "Constructed multi-value profile push: " + fields.toString());

@@ -100,8 +100,13 @@ public class ManifestInfo {
             intentServiceName = _getManifestStringValueForKey(metaData, Constants.LABEL_INTENT_SERVICE);
         }
 
-        xiaomiAppKey = _getManifestStringValueForKey(metaData, Constants.LABEL_XIAOMI_APP_KEY);
-        xiaomiAppID = _getManifestStringValueForKey(metaData, Constants.LABEL_XIAOMI_APP_ID);
+        if (xiaomiAppKey == null) {
+            xiaomiAppKey = _getManifestStringValueForKey(metaData, Constants.LABEL_XIAOMI_APP_KEY);
+        }
+
+        if (xiaomiAppID == null) {
+            xiaomiAppID = _getManifestStringValueForKey(metaData, Constants.LABEL_XIAOMI_APP_ID);
+        }
 
         profileKeys = parseProfileKeys(metaData);
     }
@@ -150,7 +155,9 @@ public class ManifestInfo {
         return beta;
     }
 
-    String getAccountRegion() {
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public String getAccountRegion() {
+        Logger.v("ManifestInfo: getAccountRegion called, returning region:"+accountRegion);
         return accountRegion;
     }
 
@@ -170,7 +177,8 @@ public class ManifestInfo {
         return backgroundSync;
     }
 
-    boolean isSSLPinningEnabled() {
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public boolean isSSLPinningEnabled() {
         return sslPinning;
     }
 
@@ -197,6 +205,18 @@ public class ManifestInfo {
         accountId = id;
         accountToken = token;
         accountRegion = region;
+    }
+
+    static void changeXiaomiCredentials(String xiaomiAppID, String xiaomiAppKey) {
+        if (ManifestInfo.xiaomiAppID != null || ManifestInfo.xiaomiAppKey != null) {
+            Logger.i("Xiaomi SDK already initialized with AppID:" + ManifestInfo.xiaomiAppID
+                    + " and AppKey:" + ManifestInfo.xiaomiAppKey + ". Cannot change credentials to "
+                    + xiaomiAppID + " and " + xiaomiAppKey);
+            return;
+        }
+
+        ManifestInfo.xiaomiAppID = xiaomiAppID;
+        ManifestInfo.xiaomiAppKey = xiaomiAppKey;
     }
 
     /**

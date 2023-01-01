@@ -64,6 +64,9 @@ public interface Constants {
     String ICON_BASE_URL = "http://static.wizrocket.com/android/ico/";
     String NOTIFICATION_CLICKED_EVENT_NAME = "Notification Clicked";
     String NOTIFICATION_VIEWED_EVENT_NAME = "Notification Viewed";
+    String DC_OUTGOING_EVENT_NAME = "DCOutgoing";
+    String DC_INCOMING_EVENT_NAME = "DCIncoming";
+    String DC_END_EVENT_NAME = "DCEnd";
     String GEOFENCE_ENTERED_EVENT_NAME = "Geocluster Entered";
     String GEOFENCE_EXITED_EVENT_NAME = "Geocluster Exited";
     String APP_LAUNCHED_EVENT = "App Launched";
@@ -193,6 +196,7 @@ public interface Constants {
     String KEY_ALLOWED_PUSH_TYPES = "allowedPushTypes";
     String KEY_IDENTITY_TYPES = "identityTypes";
     String WZRK_PUSH_ID = "wzrk_pid";
+    String WZRK_PUSH_SILENT = "wzrk_pn_s";
     String EXTRAS_FROM = "extras_from";
     String NOTIF_MSG = "nm";
     String NOTIF_TITLE = "nt";
@@ -253,6 +257,7 @@ public interface Constants {
     String LOG_TAG_PRODUCT_CONFIG = "Product Config : ";
     int FETCH_TYPE_PC = 0;
     int FETCH_TYPE_FF = 1;
+    String LOG_TAG_DIRECT_CALL = "DirectCall : ";
     String LOG_TAG_GEOFENCES = "Geofences : ";
     // error message codes
     int INVALID_MULTI_VALUE = 1;
@@ -282,6 +287,7 @@ public interface Constants {
     String CLEVERTAP_IDENTIFIER = "CLEVERTAP_IDENTIFIER";
     String SEPARATOR_COMMA = ",";
     String EMPTY_STRING = "";
+    String AUTH = "auth";
     String SP_KEY_PROFILE_IDENTITIES = "SP_KEY_PROFILE_IDENTITIES";
 
     // valid profile identifier keys
@@ -295,5 +301,19 @@ public interface Constants {
     String CLOSE_SYSTEM_DIALOGS = "close_system_dialogs";
     String KEY_CT_TYPE = "ct_type";
     String PT_INPUT_KEY = "pt_input_reply";
+
+    // ==========Fallback keys=========
+    String NOTIFICATION_HEALTH = "wzrk_pn_h";
+    String WZRK_TSR_FB = "wzrk_tsr_fb";// terminate and stay resident
+    String NOTIFICATION_RENDER_FALLBACK = "wzrk_fallback";
+
+    /**
+     * Device app bucket when notification is rendered
+     */
+    String WZRK_HEALTH_STATE_GOOD = "true";
+    String WZRK_HEALTH_STATE_BAD = "false";
+
+    String REGION_INDIA = "in1";
+    String REGION_EUROPE = "eu1";
 
 }

@@ -6,6 +6,8 @@ import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import com.clevertap.android.sdk.displayunits.DisplayUnitListener;
 import com.clevertap.android.sdk.displayunits.model.CleverTapDisplayUnit;
+import com.clevertap.android.sdk.interfaces.DCDomainCallback;
+import com.clevertap.android.sdk.interfaces.NotificationRenderedListener;
 import com.clevertap.android.sdk.interfaces.OnInitCleverTapIDListener;
 import com.clevertap.android.sdk.product_config.CTProductConfigListener;
 import com.clevertap.android.sdk.pushnotification.CTPushNotificationListener;
@@ -20,6 +22,8 @@ public class CallbackManager extends BaseCallbackManager {
 
     private GeofenceCallback geofenceCallback;
 
+    private DCDomainCallback dcDomainCallback;
+
     private WeakReference<InAppNotificationButtonListener> inAppNotificationButtonListener;
 
     private InAppNotificationListener inAppNotificationListener;
@@ -33,6 +37,8 @@ public class CallbackManager extends BaseCallbackManager {
     private FailureFlushListener failureFlushListener;
 
     private WeakReference<CTFeatureFlagsListener> featureFlagListenerWeakReference;
+
+    private NotificationRenderedListener notificationRenderedListener;
 
     private OnInitCleverTapIDListener onInitCleverTapIDListener;
 
@@ -94,6 +100,16 @@ public class CallbackManager extends BaseCallbackManager {
     @Override
     public void setGeofenceCallback(final GeofenceCallback geofenceCallback) {
         this.geofenceCallback = geofenceCallback;
+    }
+
+    @Override
+    public DCDomainCallback getDCDomainCallback() {
+        return dcDomainCallback;
+    }
+
+    @Override
+    public void setDCDomainCallback(DCDomainCallback dcDomainCallback) {
+        this.dcDomainCallback = dcDomainCallback;
     }
 
     @Override
@@ -184,6 +200,16 @@ public class CallbackManager extends BaseCallbackManager {
     @Override
     public void setOnInitCleverTapIDListener(final OnInitCleverTapIDListener onInitCleverTapIDListener) {
         this.onInitCleverTapIDListener = onInitCleverTapIDListener;
+    }
+
+    @Override
+    public void setNotificationRenderedListener(final NotificationRenderedListener notificationRenderedListener) {
+        this.notificationRenderedListener = notificationRenderedListener;
+    }
+
+    @Override
+    public NotificationRenderedListener getNotificationRenderedListener() {
+        return notificationRenderedListener;
     }
 
     //Profile
