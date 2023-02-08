@@ -16,7 +16,7 @@ buildscript {
         classpath Libs.agcp// Huawei Push Plugin
         classpath Libs.kotlin_gradle_plugin
         classpath Libs.sonarqube_gradle_plugin
-        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.8.1'
+        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.2'
         classpath("io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.20.0-RC1")
         classpath("com.vanniktech:gradle-android-junit-jacoco-plugin:0.16.0")
 
@@ -54,6 +54,7 @@ task copyTemplates {
     def props = new Properties()
     file("versions.properties").withInputStream { props.load(it) }
     outputs.upToDateWhen { false }
+    props.put("google_services",Libs.google_services.dropRight(1))
     props.put("clevertap_android_sdk",Libs.clevertap_android_sdk.dropRight(1))
     props.put("clevertap_geofence_sdk",Libs.clevertap_geofence_sdk.dropRight(1))
     props.put("clevertap_hms_sdk",Libs.clevertap_hms_sdk.dropRight(1))
@@ -76,7 +77,6 @@ task copyTemplates {
     props.put("androidx_core_core",Libs.androidx_core_core.dropRight(1))
     props.put("agcp",Libs.agcp.dropRight(1))
     props.put("com_android_tools_build_gradle",Libs.com_android_tools_build_gradle.dropRight(1))
-    props.put("google_services",Libs.google_services.dropRight(1))
     props.put("play_services_ads",Libs.play_services_ads.dropRight(1))
 
     doLast{
