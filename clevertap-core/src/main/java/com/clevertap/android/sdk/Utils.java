@@ -582,8 +582,8 @@ public final class Utils {
             Logger.i("Custom CleverTap ID passed is greater than 64 characters. ");
             return false;
         }
-        if (!cleverTapID.matches("[A-Za-z0-9()!:$@_-]*")) {
-            Logger.i("Custom CleverTap ID cannot contain special characters apart from :,(,),_,!,@,$ and - ");
+        if (!cleverTapID.matches("[=|<>;+.A-Za-z0-9()!:$@_-]*")) {
+            Logger.i("Custom CleverTap ID cannot contain special characters apart from : =,(,),_,!,@,$,|<,>,;,+,. and - ");
             return false;
         }
         return true;
@@ -648,7 +648,7 @@ public final class Utils {
         }
     }
 
-    public static String getDCDomain(String domain) {
+    public static String getSCDomain(String domain) {
         String[] parts = domain.split("\\.", 2);
         return parts[0] + "." + AUTH + "." + parts[1];
     }
