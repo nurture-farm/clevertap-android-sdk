@@ -3,10 +3,14 @@ package com.clevertap.android.sdk.events;
 import static com.clevertap.android.sdk.utils.CTJsonConverter.getErrorObject;
 
 import android.content.Context;
+
+import androidx.annotation.Nullable;
+
 import com.clevertap.android.sdk.BaseCallbackManager;
 import com.clevertap.android.sdk.CTLockManager;
 import com.clevertap.android.sdk.CleverTapInstanceConfig;
 import com.clevertap.android.sdk.Constants;
+import com.clevertap.android.sdk.ControllerManager;
 import com.clevertap.android.sdk.CoreMetaData;
 import com.clevertap.android.sdk.DeviceInfo;
 import com.clevertap.android.sdk.FailureFlushListener;
@@ -16,6 +20,7 @@ import com.clevertap.android.sdk.ManifestInfo;
 import com.clevertap.android.sdk.SessionManager;
 import com.clevertap.android.sdk.StorageHelper;
 import com.clevertap.android.sdk.Utils;
+import com.clevertap.android.sdk.cryption.CryptHandler;
 import com.clevertap.android.sdk.db.BaseDatabaseManager;
 import com.clevertap.android.sdk.login.IdentityRepo;
 import com.clevertap.android.sdk.login.IdentityRepoFactory;
@@ -28,14 +33,17 @@ import com.clevertap.android.sdk.task.Task;
 import com.clevertap.android.sdk.validation.ValidationResult;
 import com.clevertap.android.sdk.validation.ValidationResultStack;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class EventQueueManager extends BaseEventQueueManager implements FailureFlushListener {
 
@@ -79,6 +87,9 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
 
     private boolean deferClevertapEventsUntilDataLoaded = true;
 
+    private final ControllerManager controllerManager;
+    private final CryptHandler cryptHandler;
+
     public EventQueueManager(final BaseDatabaseManager baseDatabaseManager,
             Context context,
             CleverTapInstanceConfig config,
@@ -91,7 +102,9 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
             NetworkManager networkManager,
             CoreMetaData coreMetaData,
             CTLockManager ctLockManager,
-            final LocalDataStore localDataStore) {
+            final LocalDataStore localDataStore,
+            ControllerManager controllerManager,
+            CryptHandler cryptHandler) {
         this.baseDatabaseManager = baseDatabaseManager;
         this.context = context;
         this.config = config;
@@ -106,6 +119,9 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
         cleverTapMetaData = coreMetaData;
         this.ctLockManager = ctLockManager;
         this.manifest = ManifestInfo.getInstance(context);
+        this.controllerManager = controllerManager;
+        this.cryptHandler = cryptHandler;
+
         callbackManager.setFailureFlushListener(this);
         deferClevertapEventsUntilDataLoaded = (StorageHelper.getInt(context,DEFER_SENDING_EVENT_KEY,1) == 1);
         loadCommonEventDataFromStorage(context);
@@ -141,9 +157,15 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
             config.getLogger()
                     .verbose(config.getAccountId(), "Pushing Notification Viewed event onto separate queue");
             processPushNotificationViewedEvent(context, event);
+        } else if(eventType == Constants.DEFINE_VARS_EVENT) {
+            processDefineVarsEvent(context, event);
         } else {
             processEvent(context, event, eventType);
         }
+    }
+
+    private void processDefineVarsEvent(Context context, JSONObject event) {
+        sendImmediately(context, EventGroup.VARIABLES, event);
     }
 
     @Override
@@ -174,29 +196,87 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
         });
     }
 
+    /**
+     * Flushes the events queue synchronously with a default null value for the caller.
+     * This is an overloaded method that internally calls {@link EventQueueManager#flushQueueSync(Context, EventGroup, String)}.
+     *
+     * @param context     The Context object.
+     * @param eventGroup  The EventGroup for which the queue needs to be flushed.
+     */
     @Override
     public void flushQueueSync(final Context context, final EventGroup eventGroup) {
+        flushQueueSync(context,eventGroup,null);
+    }
+
+    /**
+     * Flushes the events queue synchronously, checking network connectivity, offline mode, and performing handshake if necessary.
+     *
+     * @param context     The Context object.
+     * @param eventGroup  The EventGroup for which the queue needs to be flushed.
+     * @param caller      The optional caller identifier.
+     */
+    @Override
+    public void flushQueueSync(final Context context, final EventGroup eventGroup, @Nullable final String caller) {
+        /*if (caller == null && eventGroup == EventGroup.PUSH_NOTIFICATION_VIEWED)
+            return;*/
+        // Check if network connectivity is available
         if (!NetworkManager.isNetworkOnline(context)) {
             logger.verbose(config.getAccountId(), "Network connectivity unavailable. Will retry later");
+            controllerManager.invokeCallbacksForNetworkError();
+            return;
+        }
+
+        // Check if CleverTap instance is set to offline mode
+        if (cleverTapMetaData.isOffline()) {
+            logger.debug(config.getAccountId(),
+                    "CleverTap Instance has been set to offline, won't send events queue");
+            controllerManager.invokeCallbacksForNetworkError();
+            return;
+        }
+
+        // Check if handshake is required for the domain associated with the event group
+        if (networkManager.needsHandshakeForDomain(eventGroup)) {
+            // Perform handshake and then flush the DB queue
+            networkManager.initHandshake(eventGroup, new Runnable() {
+                @Override
+                public void run() {
+                    networkManager.flushDBQueue(context, eventGroup,caller);
+                }
+            });
+        } else {
+            logger.verbose(config.getAccountId(), "Pushing Notification Viewed event onto queue DB flush");
+
+            // No handshake required, directly flush the DB queue
+            networkManager.flushDBQueue(context, eventGroup,caller);
+        }
+    }
+
+    /**
+     * This method is currently used only for syncing of variables. If you find it appropriate you
+     * can add handling of network error similar to flushQueueSync, also check return value of
+     * sendQueue for success.
+     */
+    @Override
+    public void sendImmediately(Context context, EventGroup eventGroup, JSONObject eventData) {
+        if (!NetworkManager.isNetworkOnline(context)) {
+            logger.verbose(config.getAccountId(), "Network connectivity unavailable. Event won't be sent.");
             return;
         }
 
         if (cleverTapMetaData.isOffline()) {
             logger.debug(config.getAccountId(),
-                    "CleverTap Instance has been set to offline, won't send events queue");
+                "CleverTap Instance has been set to offline, won't send event");
             return;
         }
 
+        JSONArray singleEventQueue = new JSONArray().put(eventData);
+
         if (networkManager.needsHandshakeForDomain(eventGroup)) {
-            networkManager.initHandshake(eventGroup, new Runnable() {
-                @Override
-                public void run() {
-                    networkManager.flushDBQueue(context, eventGroup);
-                }
+            networkManager.initHandshake(eventGroup, () -> {
+                networkManager.sendQueue(context, eventGroup, singleEventQueue, null);
             });
         } else {
-            logger.verbose(config.getAccountId(), "Pushing Notification Viewed event onto queue DB flush");
-            networkManager.flushDBQueue(context, eventGroup);
+            networkManager.sendQueue(context, eventGroup, singleEventQueue, null);
         }
     }
 
@@ -337,7 +417,7 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
                 Iterator<String> i = baseProfile.keys();
                 IdentityRepo iProfileHandler = IdentityRepoFactory
                         .getRepo(context, config, deviceInfo, validationResultStack);
-                setLoginInfoProvider(new LoginInfoProvider(context, config, deviceInfo));
+                setLoginInfoProvider(new LoginInfoProvider(context, config, deviceInfo, cryptHandler));
                 while (i.hasNext()) {
                     String next = i.next();
 
@@ -540,8 +620,8 @@ public class EventQueueManager extends BaseEventQueueManager implements FailureF
                 @Override
                 public void run() {
                     config.getLogger()
-                            .verbose(config.getAccountId(),
-                                    "Pushing Notification Viewed event onto queue flush async");
+                        .verbose(config.getAccountId(),
+                            "Pushing Notification Viewed event onto queue flush async");
                     flushQueueAsync(context, EventGroup.PUSH_NOTIFICATION_VIEWED);
                 }
             };

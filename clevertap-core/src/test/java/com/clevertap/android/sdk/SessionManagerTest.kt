@@ -2,6 +2,7 @@ package com.clevertap.android.sdk
 
 
 import android.content.Context
+import com.clevertap.android.sdk.cryption.CryptHandler
 import com.clevertap.android.sdk.events.EventDetail
 import com.clevertap.android.sdk.validation.Validator
 import com.clevertap.android.shared.test.BaseTestCase
@@ -20,6 +21,7 @@ class SessionManagerTest : BaseTestCase() {
     private lateinit var coreMetaData: CoreMetaData
     private lateinit var validator : Validator
     private lateinit var localDataStoreDef: LocalDataStore
+    private lateinit var cryptHandler : CryptHandler
     override fun setUp() {
         super.setUp()
         config = CleverTapInstanceConfig.createInstance(application, "id", "token", "region")
@@ -28,8 +30,8 @@ class SessionManagerTest : BaseTestCase() {
         configDef = CleverTapInstanceConfig.createDefaultInstance(application, "id", "token", "region")
         coreMetaData = CoreMetaData()
         validator = Validator()
-
-        localDataStoreDef = LocalDataStore(application,configDef)
+        cryptHandler = CryptHandler(0, CryptHandler.EncryptionAlgorithm.AES, "id")
+        localDataStoreDef = LocalDataStore(application, configDef, cryptHandler)
 
         sessionManagerDef = SessionManager(configDef,coreMetaData,validator,localDataStoreDef)
 
@@ -130,14 +132,15 @@ class SessionManagerTest : BaseTestCase() {
         // we verify by verifying coreMetaDataSpy calls.
         var coreMetaDataSpy = Mockito.spy(coreMetaData).also { it.currentSessionId = 0 }
         var ctxSpy = Mockito.spy(application)
-        sessionManagerDef = SessionManager(configDef,coreMetaDataSpy,validator,localDataStoreDef)
+        sessionManagerDef = Mockito.spy(SessionManager(configDef,coreMetaDataSpy,validator,localDataStoreDef))
 
+        Mockito.`when`(sessionManagerDef.now).thenReturn(1000)
         // when lazyCreateSession is called while coreMetaData.currentSessionId ==0 , createSession gets called and
         // 1. coreMetaData.currentSessionId to System.currentTimeMillis() / 1000
         // 2. value of lastSessionId in cache is set to value of coreMetaData.getCurrentSessionId()
 
         sessionManagerDef.lazyCreateSession(ctxSpy)
-        val expectedSettedValue = (System.currentTimeMillis() / 1000).toInt()
+        val expectedSettedValue = 1000
         Thread.sleep(1000)
         Mockito.verify(coreMetaDataSpy,Mockito.times(1)).currentSessionId = 0//(System.currentTimeMillis() / 1000).toInt()
         val settedValue = ctxSpy.getSharedPreferences("WizRocket",Context.MODE_PRIVATE).getInt("lastSessionId:id",-1)

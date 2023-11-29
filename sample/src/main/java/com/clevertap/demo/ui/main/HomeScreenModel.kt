@@ -19,10 +19,22 @@ object HomeScreenModel {
                 "onUserLogin"
             ),
             "INBOX" to listOf(
-                "Open Inbox(with tabs)","Open Inbox(without tabs)","Show Total Counts", "Show Unread Counts", "Get All Inbox Messages",
-                "Get Unread Messages", "Get InboxMessage by messageID", "Delete InboxMessage by messageID",
-                "Delete InboxMessage by Object", "Mark as read by messageID", "Mark as read by Object",
-                "Notification Viewed event for Message", "Notification Clicked event for Message"
+                "Open Inbox(with tabs)",
+                "Open Inbox(without tabs)",
+                "Show Total Counts",
+                "Show Unread Counts",
+                "Get All Inbox Messages",
+                "Get Unread Messages",
+                "Get InboxMessage by messageID",
+                "Delete InboxMessage by messageID",
+                "Delete InboxMessage by Object",
+                "Delete multiple InboxMessages by list of messageIDs",
+                "Mark as read by messageID",
+                "Mark as read by Object",
+                "Mark multiple InboxMessages as read by list of messageIDs",
+                "Notification Viewed event for Message",
+                "Notification Clicked event for Message",
+                "Custom KV Root level"
             ),
             "DISPLAY UNITS" to listOf(
                 "Get Display Unit For Id", "Get All Display Units",
@@ -63,7 +75,18 @@ object HomeScreenModel {
                 "Input Box - reminder - DOC true",
                 "Input Box - reminder - DOC false",
                 "Three CTA"
-            )
+            ),
+            "PROMPT LOCAL IAM" to listOf(
+                "Half-Interstitial Local IAM",
+                "Half-Interstitial Local IAM with image URL",
+                "Half-Interstitial Local IAM with fallbackToSettings - true",
+                "Alert Local IAM",
+                "Alert Local IAM with followDeviceOrientation - false",
+                "Alert Local IAM with fallbackToSettings - true",
+                "Hard permission dialog with fallbackToSettings - false",
+                "Hard permission dialog with fallbackToSettings - true"
+            ),
+            "INAPP" to listOf("Footer InApp", "Footer InApp without image")
         )
     }
 }

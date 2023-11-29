@@ -2,6 +2,7 @@ package com.clevertap.android.sdk;
 
 import static com.clevertap.android.sdk.Utils.runOnUiThread;
 
+import androidx.annotation.Nullable;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import com.clevertap.android.sdk.displayunits.DisplayUnitListener;
@@ -12,8 +13,11 @@ import com.clevertap.android.sdk.interfaces.OnInitCleverTapIDListener;
 import com.clevertap.android.sdk.product_config.CTProductConfigListener;
 import com.clevertap.android.sdk.pushnotification.CTPushNotificationListener;
 import com.clevertap.android.sdk.pushnotification.amp.CTPushAmpListener;
+import com.clevertap.android.sdk.variables.callbacks.FetchVariablesCallback;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.List;
 
 @RestrictTo(Scope.LIBRARY)
 public class CallbackManager extends BaseCallbackManager {
@@ -28,6 +32,8 @@ public class CallbackManager extends BaseCallbackManager {
 
     private InAppNotificationListener inAppNotificationListener;
 
+    private final List<PushPermissionResponseListener> pushPermissionResponseListenerList = new ArrayList<>();
+
     private CTInboxListener inboxListener;
 
     private final CleverTapInstanceConfig config;
@@ -36,12 +42,14 @@ public class CallbackManager extends BaseCallbackManager {
 
     private FailureFlushListener failureFlushListener;
 
+    @Deprecated
     private WeakReference<CTFeatureFlagsListener> featureFlagListenerWeakReference;
 
     private NotificationRenderedListener notificationRenderedListener;
 
     private OnInitCleverTapIDListener onInitCleverTapIDListener;
 
+    @Deprecated
     private WeakReference<CTProductConfigListener> productConfigListener;
 
     private CTPushAmpListener pushAmpListener = null;
@@ -54,6 +62,8 @@ public class CallbackManager extends BaseCallbackManager {
         this.config = config;
         this.deviceInfo = deviceInfo;
     }
+
+    private FetchVariablesCallback fetchVariablesCallback;
 
     @Override
     public void _notifyInboxMessagesDidUpdate() {
@@ -79,6 +89,12 @@ public class CallbackManager extends BaseCallbackManager {
         this.failureFlushListener = failureFlushListener;
     }
 
+    /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
+     */
+    @Deprecated
     @Override
     public CTFeatureFlagsListener getFeatureFlagListener() {
         if (featureFlagListenerWeakReference != null && featureFlagListenerWeakReference.get() != null) {
@@ -87,6 +103,12 @@ public class CallbackManager extends BaseCallbackManager {
         return null;
     }
 
+    /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
+     */
+    @Deprecated
     @Override
     public void setFeatureFlagListener(final CTFeatureFlagsListener listener) {
         this.featureFlagListenerWeakReference = new WeakReference<>(listener);
@@ -132,8 +154,23 @@ public class CallbackManager extends BaseCallbackManager {
     }
 
     @Override
+    public List<PushPermissionResponseListener> getPushPermissionResponseListenerList() {
+        return pushPermissionResponseListenerList;
+    }
+
+    @Override
     public void setInAppNotificationListener(final InAppNotificationListener inAppNotificationListener) {
         this.inAppNotificationListener = inAppNotificationListener;
+    }
+
+    @Override
+    public void registerPushPermissionResponseListener(PushPermissionResponseListener pushPermissionResponseListener) {
+        this.pushPermissionResponseListenerList.add(pushPermissionResponseListener);
+    }
+
+    @Override
+    public void unregisterPushPermissionResponseListener(PushPermissionResponseListener pushPermissionResponseListener) {
+        this.pushPermissionResponseListenerList.remove(pushPermissionResponseListener);
     }
 
     @Override
@@ -146,6 +183,12 @@ public class CallbackManager extends BaseCallbackManager {
         this.inboxListener = inboxListener;
     }
 
+    /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
+     */
+    @Deprecated
     @Override
     public CTProductConfigListener getProductConfigListener() {
         if (productConfigListener != null && productConfigListener.get() != null) {
@@ -154,6 +197,12 @@ public class CallbackManager extends BaseCallbackManager {
         return null;
     }
 
+    /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
+     */
+    @Deprecated
     @Override
     public void setProductConfigListener(final CTProductConfigListener productConfigListener) {
         if (productConfigListener != null) {
@@ -201,17 +250,6 @@ public class CallbackManager extends BaseCallbackManager {
     public void setOnInitCleverTapIDListener(final OnInitCleverTapIDListener onInitCleverTapIDListener) {
         this.onInitCleverTapIDListener = onInitCleverTapIDListener;
     }
-
-    @Override
-    public void setNotificationRenderedListener(final NotificationRenderedListener notificationRenderedListener) {
-        this.notificationRenderedListener = notificationRenderedListener;
-    }
-
-    @Override
-    public NotificationRenderedListener getNotificationRenderedListener() {
-        return notificationRenderedListener;
-    }
-
     //Profile
     @Override
     public void notifyUserProfileInitialized(String deviceID) {
@@ -280,4 +318,14 @@ public class CallbackManager extends BaseCallbackManager {
         notifyUserProfileInitialized(deviceInfo.getDeviceID());
     }
 
+    @Override @Nullable
+    public FetchVariablesCallback getFetchVariablesCallback() {
+        return fetchVariablesCallback;
+    }
+
+    @Override
+    public void setFetchVariablesCallback(
+        FetchVariablesCallback fetchVariablesCallback) {
+        this.fetchVariablesCallback = fetchVariablesCallback;
+    }
 }

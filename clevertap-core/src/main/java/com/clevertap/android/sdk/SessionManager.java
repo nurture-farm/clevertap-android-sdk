@@ -36,7 +36,6 @@ public class SessionManager extends BaseSessionManager {
         if ((now - appLastSeen) > Constants.SESSION_LENGTH_MINS * 60 * 1000) {
             config.getLogger().verbose(config.getAccountId(), "Session Timed Out");
             destroySession();
-            CoreMetaData.setCurrentActivity(null);
         }
     }
 
@@ -88,7 +87,7 @@ public class SessionManager extends BaseSessionManager {
     }
 
     private void createSession(final Context context) {
-        int sessionId = (int) (System.currentTimeMillis() / 1000);
+        int sessionId = getNow();
         cleverTapMetaData.setCurrentSessionId(sessionId);
 
         config.getLogger().verbose(config.getAccountId(),
@@ -113,6 +112,10 @@ public class SessionManager extends BaseSessionManager {
                 .putInt(StorageHelper.storageKeyWithSuffix(config, Constants.SESSION_ID_LAST),
                         cleverTapMetaData.getCurrentSessionId());
         StorageHelper.persist(editor);
+    }
+
+    int getNow() {
+        return (int) (System.currentTimeMillis() / 1000);
     }
 
 }

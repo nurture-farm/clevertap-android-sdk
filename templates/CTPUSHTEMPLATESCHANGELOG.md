@@ -1,5 +1,49 @@
 ## CleverTap Push Templates SDK CHANGE LOG
 
+### Version 1.2.0 (October 27, 2023)
+#### New features
+* Adds support for developer defined default notification channel for PushTemplates. Please refer to
+  the [EXAMPLES.md](EXAMPLES.md#push-notifications) file to read more on how to setup default
+  channel in your app.
+#### Bug Fixes
+* Fixes a bug in the Rating PushTemplate where clicking of a star resulted in no action.
+* Fixes [#488](https://github.com/CleverTap/clevertap-android-sdk/issues/488) - a bug related to the image sequence in Manual Carousel PushTemplate.
+
+### Version 1.1.0 (June 28, 2023)
+
+* Supports CleverTap Android SDK v5.1.0.
+* RenderMax Push SDK functionality is now supported directly within the CleverTap Core SDK starting
+  from core v5.1.0.
+
+### Version 1.0.9 (May 5, 2023)
+
+#### Bug Fixes
+
+* Fixes a bug where Rating Submitted event was not being raised by the Rating Template on Android 12
+  and above.
+
+### Version 1.0.8 (March 8, 2023)
+
+* Supports CleverTap Android SDK v4.7.5. CleverTap Push Templates SDK `v1.0.8`
+  requires [CleverTap Android SDK v4.7.5](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+  to work properly.
+
+### Version 1.0.7 (December 5, 2022)
+
+* UI bug fixes for Non-linear Product Catalogue template.
+* Supports CleverTap Android SDK v4.7.2.
+
+### Version 1.0.6 (November 1, 2022)
+* Targets Android 13
+* Supports CleverTap Android SDK v4.7.0
+* Minimum Android SDK version bumped to API 19 (Android 4.4).
+
+### Version 1.0.5.1 (March 15, 2023)
+* Supports CleverTap Android SDK v4.6.7. CleverTap Push Templates SDK `v1.0.5.1` requires [CleverTap Android SDK v4.6.7](https://github.com/CleverTap/clevertap-android-sdk/blob/master_android12/docs/CTCORECHANGELOG.md) to work properly.
+* **Note:** This release is being done for Android 12 targeted users, satisfying below points.
+  * Targeting Android 12 and
+  * Using RenderMax and/or using Push Templates
+
 ### Version 1.0.5 (September 13, 2022)
 * fixes a bug on android 12 where push template notification header was not displaying subtitle text.
 

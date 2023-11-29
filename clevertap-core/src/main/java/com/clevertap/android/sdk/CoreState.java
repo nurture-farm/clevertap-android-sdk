@@ -1,6 +1,8 @@
 package com.clevertap.android.sdk;
 
 import android.content.Context;
+
+import com.clevertap.android.sdk.cryption.CryptHandler;
 import com.clevertap.android.sdk.db.BaseDatabaseManager;
 import com.clevertap.android.sdk.events.BaseEventQueueManager;
 import com.clevertap.android.sdk.events.EventMediator;
@@ -12,6 +14,9 @@ import com.clevertap.android.sdk.product_config.CTProductConfigFactory;
 import com.clevertap.android.sdk.pushnotification.PushProviders;
 import com.clevertap.android.sdk.task.MainLooperHandler;
 import com.clevertap.android.sdk.validation.ValidationResultStack;
+import com.clevertap.android.sdk.variables.CTVariables;
+import com.clevertap.android.sdk.variables.Parser;
+import com.clevertap.android.sdk.variables.VarCache;
 
 public class CoreState extends CleverTapState {
 
@@ -54,6 +59,30 @@ public class CoreState extends CleverTapState {
     private BaseNetworkManager networkManager;
 
     private PushProviders pushProviders;
+
+    private VarCache varCache;
+
+    private Parser parser;
+
+    private CryptHandler cryptHandler;
+
+    public CTVariables getCTVariables() {
+        return ctVariables;
+    }
+
+    public void setCTVariables(final CTVariables CTVariables) {
+        ctVariables = CTVariables;
+    }
+
+    private CTVariables ctVariables;
+
+    public Parser getParser() {
+        return parser;
+    }
+
+    public void setParser(final Parser parser) {
+        this.parser = parser;
+    }
 
     CoreState(final Context context) {
         super(context);
@@ -123,6 +152,12 @@ public class CoreState extends CleverTapState {
         this.coreMetaData = coreMetaData;
     }
 
+    /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
+     */
+    @Deprecated
     public CTProductConfigController getCtProductConfigController() {
         initProductConfig();
         return getControllerManager().getCTProductConfigController();
@@ -230,6 +265,28 @@ public class CoreState extends CleverTapState {
         this.mainLooperHandler = mainLooperHandler;
     }
 
+    public VarCache getVarCache() {
+        return varCache;
+    }
+
+    public void setVarCache(final VarCache varCache) {
+        this.varCache = varCache;
+    }
+
+    public CryptHandler getCryptHandler() {
+        return cryptHandler;
+    }
+
+    public void setCryptHandler(final CryptHandler cryptHandler) {
+        this.cryptHandler = cryptHandler;
+    }
+
+    /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
+     */
+    @Deprecated
     private void initProductConfig() {
         if (getConfig().isAnalyticsOnly()) {
             getConfig().getLogger()

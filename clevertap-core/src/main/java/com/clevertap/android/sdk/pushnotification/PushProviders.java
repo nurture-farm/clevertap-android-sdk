@@ -28,6 +28,7 @@ import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.core.app.NotificationCompat;
 import com.clevertap.android.sdk.AnalyticsManager;
+import com.clevertap.android.sdk.CTXtensions;
 import com.clevertap.android.sdk.CleverTapAPI.DevicePushTokenRefreshListener;
 import com.clevertap.android.sdk.CleverTapInstanceConfig;
 import com.clevertap.android.sdk.Constants;
@@ -43,6 +44,7 @@ import com.clevertap.android.sdk.interfaces.AudibleNotification;
 import com.clevertap.android.sdk.pushnotification.PushConstants.PushType;
 import com.clevertap.android.sdk.pushnotification.amp.CTBackgroundIntentService;
 import com.clevertap.android.sdk.pushnotification.amp.CTBackgroundJobService;
+import com.clevertap.android.sdk.pushnotification.work.CTWorkManager;
 import com.clevertap.android.sdk.task.CTExecutorFactory;
 import com.clevertap.android.sdk.task.Task;
 import com.clevertap.android.sdk.utils.PackageUtils;
@@ -82,12 +84,14 @@ public class PushProviders implements CTPushProviderListener {
     private final CleverTapInstanceConfig config;
 
     private final Context context;
+    private final CTWorkManager ctWorkManager;
 
     private INotificationRenderer iNotificationRenderer = new CoreNotificationRenderer();
 
     private final ValidationResultStack validationResultStack;
 
     private final Object tokenLock = new Object();
+
     private final Object pushRenderingLock = new Object();
 
     private DevicePushTokenRefreshListener tokenRefreshListener;
@@ -99,12 +103,13 @@ public class PushProviders implements CTPushProviderListener {
      */
     @NonNull
     public static PushProviders load(Context context,
-            CleverTapInstanceConfig config,
-            BaseDatabaseManager baseDatabaseManager,
-            ValidationResultStack validationResultStack,
-            AnalyticsManager analyticsManager, ControllerManager controllerManager) {
+                                     CleverTapInstanceConfig config,
+                                     BaseDatabaseManager baseDatabaseManager,
+                                     ValidationResultStack validationResultStack,
+                                     AnalyticsManager analyticsManager, ControllerManager controllerManager,
+                                     CTWorkManager ctWorkManager) {
         PushProviders providers = new PushProviders(context, config, baseDatabaseManager, validationResultStack,
-                analyticsManager);
+                analyticsManager,ctWorkManager);
         providers.init();
         controllerManager.setPushProviders(providers);
         return providers;
@@ -115,12 +120,13 @@ public class PushProviders implements CTPushProviderListener {
             CleverTapInstanceConfig config,
             BaseDatabaseManager baseDatabaseManager,
             ValidationResultStack validationResultStack,
-            AnalyticsManager analyticsManager) {
+            AnalyticsManager analyticsManager, CTWorkManager ctWorkManager) {
         this.context = context;
         this.config = config;
         this.baseDatabaseManager = baseDatabaseManager;
         this.validationResultStack = validationResultStack;
         this.analyticsManager = analyticsManager;
+        this.ctWorkManager = ctWorkManager;
         initPushAmp();
     }
 
@@ -151,20 +157,17 @@ public class PushProviders implements CTPushProviderListener {
         }
 
         try {
-            boolean isSilent = extras.getString(Constants.WZRK_PUSH_SILENT,"").equalsIgnoreCase("true");
-            if(isSilent){
+            boolean isSilent = extras.getString(Constants.WZRK_PUSH_SILENT, "").equalsIgnoreCase("true");
+            if (isSilent) {
                 analyticsManager.pushNotificationViewedEvent(extras);
-                return ;
+                return;
             }
             String extrasFrom = extras.getString(Constants.EXTRAS_FROM);
             if (extrasFrom == null || !extrasFrom.equals("PTReceiver")) {
                 config.getLogger()
                         .debug(config.getAccountId(),
                                 "Handling notification: " + extras);
-                config.getLogger()
-                        .debug(config.getAccountId(),
-                                "Handling notification::nh_source = " + extras.getString("nh_source",
-                                        "source not available"));
+
                 if (extras.getString(Constants.WZRK_PUSH_ID) != null) {
                     if (baseDatabaseManager.loadDBAdapter(context)
                             .doesPushNotificationIdExist(
@@ -190,6 +193,7 @@ public class PushProviders implements CTPushProviderListener {
                     return;
                 }
             }
+
             String notifTitle = iNotificationRenderer.getTitle(extras,
                     context);//extras.getString(Constants.NOTIF_TITLE, "");// uncommon - getTitle()
             notifTitle = notifTitle.isEmpty() ? context.getApplicationInfo().name
@@ -472,8 +476,8 @@ public class PushProviders implements CTPushProviderListener {
                         analyticsManager.sendPingEvent(eventObject);
 
                         int flagsAlarmPendingIntent = PendingIntent.FLAG_UPDATE_CURRENT;
-                        if (VERSION.SDK_INT >= VERSION_CODES.S) {
-                            flagsAlarmPendingIntent |= PendingIntent.FLAG_MUTABLE;
+                        if (VERSION.SDK_INT >= VERSION_CODES.M) {
+                            flagsAlarmPendingIntent |= PendingIntent.FLAG_IMMUTABLE;
                         }
 
                         if (parameters == null) {
@@ -745,14 +749,16 @@ public class PushProviders implements CTPushProviderListener {
      * Loads all the plugins that are currently supported by the device.
      */
     private void init() {
-
         findEnabledPushTypes();
-
         List<CTPushProvider> providers = createProviders();
+        Task<Void> task = CTExecutorFactory.executors(config).postAsyncSafelyTask();
 
-        findCTPushProviders(providers);
+        task.addOnSuccessListener(unused -> findCustomEnabledPushTypes());
+        task.execute("asyncFindCTPushProviders", () -> {
+            findCTPushProviders(providers);
+            return null;
+        });
 
-        findCustomEnabledPushTypes();
     }
 
     private void initPushAmp() {
@@ -852,9 +858,9 @@ public class PushProviders implements CTPushProviderListener {
                 data.put("action", action);
                 data.put("id", token);
                 data.put("type", pushType.getType());
-                if(pushType== PushType.XPS){
+                if (pushType == PushType.XPS) {
                     config.getLogger().verbose("PushProviders: pushDeviceTokenEvent requesting device region");
-                    data.put("region",pushType.getServerRegion());
+                    data.put("region", pushType.getServerRegion());
                 }
                 event.put("data", data);
                 config.getLogger().verbose(config.getAccountId(), pushType + action + " device token " + token);
@@ -931,8 +937,8 @@ public class PushProviders implements CTPushProviderListener {
             intent.setPackage(context.getPackageName());
 
             int flagsAlarmPendingIntent = PendingIntent.FLAG_UPDATE_CURRENT;
-            if (VERSION.SDK_INT >= VERSION_CODES.S) {
-                flagsAlarmPendingIntent |= PendingIntent.FLAG_MUTABLE;
+            if (VERSION.SDK_INT >= VERSION_CODES.M) {
+                flagsAlarmPendingIntent |= PendingIntent.FLAG_IMMUTABLE;
             }
             PendingIntent alarmPendingIntent = PendingIntent
                     .getService(context, config.getAccountId().hashCode(), intent,
@@ -949,8 +955,8 @@ public class PushProviders implements CTPushProviderListener {
         Intent cancelIntent = new Intent(CTBackgroundIntentService.MAIN_ACTION);
         cancelIntent.setPackage(context.getPackageName());
         int flagsAlarmPendingIntent = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (VERSION.SDK_INT >= VERSION_CODES.S) {
-            flagsAlarmPendingIntent |= PendingIntent.FLAG_MUTABLE;
+        if (VERSION.SDK_INT >= VERSION_CODES.M) {
+            flagsAlarmPendingIntent |= PendingIntent.FLAG_IMMUTABLE;
         }
         PendingIntent alarmPendingIntent = PendingIntent
                 .getService(context, config.getAccountId().hashCode(), cancelIntent,
@@ -998,9 +1004,10 @@ public class PushProviders implements CTPushProviderListener {
         }
 
         String channelId = extras.getString(Constants.WZRK_CHANNEL_ID, "");
-        boolean requiresChannelId = VERSION.SDK_INT >= VERSION_CODES.O;
+        String updatedChannelId = null;
+        final boolean requiresChannelId = VERSION.SDK_INT >= VERSION_CODES.O;
 
-        if (VERSION.SDK_INT >= VERSION_CODES.O) {
+        if (requiresChannelId) {
             int messageCode = -1;
             String value = "";
 
@@ -1015,9 +1022,29 @@ public class PushProviders implements CTPushProviderListener {
                 ValidationResult channelIdError = ValidationResultFactory.create(512, messageCode, value);
                 config.getLogger().debug(config.getAccountId(), channelIdError.getErrorDesc());
                 validationResultStack.pushValidationResult(channelIdError);
+            }
+
+            // get channel using channel id from push payload. If channel id is null or empty then create default
+            updatedChannelId = CTXtensions.getOrCreateChannel(notificationManager, channelId, context);
+
+            // if no channel gets created then do not render push
+            if (updatedChannelId == null || updatedChannelId.trim().isEmpty()) {
+                config.getLogger()
+                        .debug(config.getAccountId(), "Not rendering Push since channel id is null or blank.");
                 return;
             }
+
+            // if channel is blocked by user then do not render push
+            if (!CTXtensions.isNotificationChannelEnabled(context,updatedChannelId)) {
+                config.getLogger()
+                        .verbose(config.getAccountId(),
+                                "Not rendering push notification as channel = " + updatedChannelId + " is blocked by user");
+                return;
+            }
+
+            config.getLogger().debug(config.getAccountId(), "Rendering Push on channel = " + updatedChannelId);
         }
+
         int smallIcon;
         try {
             String x = ManifestInfo.getInstance(context).getNotificationIcon();
@@ -1087,7 +1114,7 @@ public class PushProviders implements CTPushProviderListener {
 
         NotificationCompat.Builder nb;
         if (requiresChannelId) {
-            nb = new NotificationCompat.Builder(context, channelId);
+            nb = new NotificationCompat.Builder(context, updatedChannelId);
 
             // choices here are Notification.BADGE_ICON_NONE = 0, Notification.BADGE_ICON_SMALL = 1, Notification.BADGE_ICON_LARGE = 2.  Default is  Notification.BADGE_ICON_LARGE
             String badgeIconParam = extras
@@ -1156,10 +1183,16 @@ public class PushProviders implements CTPushProviderListener {
                 return;
             }
 
+            long omrStart = extras.getLong(Constants.OMR_INVOKE_TIME_IN_MILLIS, -1);
+            if (omrStart >= 0) {
+                long prt = System.currentTimeMillis() - omrStart;
+                config.getLogger()
+                        .verbose("Rendered Push Notification in " + prt + " millis");
+            }
+
+            ctWorkManager.init();
             analyticsManager.pushNotificationViewedEvent(extras);
-            config.getLogger()
-                    .verbose("Rendered Push Notification... from nh_source = " + extras.getString("nh_source",
-                            "source not available"));
+
         }
     }
 }

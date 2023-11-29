@@ -1,11 +1,13 @@
 package com.clevertap.android.sdk;
 
 import static android.content.Context.NOTIFICATION_SERVICE;
+import static com.clevertap.android.sdk.CTXtensions.isPackageAndOsTargetsAbove;
 import static com.clevertap.android.sdk.Utils.getSCDomain;
 import static com.clevertap.android.sdk.pushnotification.PushConstants.FCM_LOG_TAG;
 import static com.clevertap.android.sdk.pushnotification.PushConstants.LOG_TAG;
 import static com.clevertap.android.sdk.pushnotification.PushConstants.PushType.FCM;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.NotificationChannel;
 import android.app.NotificationChannelGroup;
@@ -14,11 +16,13 @@ import android.app.job.JobParameters;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.location.Location;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
@@ -27,18 +31,20 @@ import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.annotation.WorkerThread;
+
 import com.clevertap.android.sdk.displayunits.DisplayUnitListener;
 import com.clevertap.android.sdk.displayunits.model.CleverTapDisplayUnit;
 import com.clevertap.android.sdk.events.EventDetail;
 import com.clevertap.android.sdk.events.EventGroup;
 import com.clevertap.android.sdk.featureFlags.CTFeatureFlagsController;
+import com.clevertap.android.sdk.inapp.CTLocalInApp;
 import com.clevertap.android.sdk.inbox.CTInboxActivity;
 import com.clevertap.android.sdk.inbox.CTInboxMessage;
 import com.clevertap.android.sdk.inbox.CTMessageDAO;
-import com.clevertap.android.sdk.interfaces.SCDomainListener;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
 import com.clevertap.android.sdk.interfaces.NotificationRenderedListener;
 import com.clevertap.android.sdk.interfaces.OnInitCleverTapIDListener;
+import com.clevertap.android.sdk.interfaces.SCDomainListener;
 import com.clevertap.android.sdk.network.NetworkManager;
 import com.clevertap.android.sdk.product_config.CTProductConfigController;
 import com.clevertap.android.sdk.product_config.CTProductConfigListener;
@@ -55,8 +61,17 @@ import com.clevertap.android.sdk.task.Task;
 import com.clevertap.android.sdk.utils.UriHelper;
 import com.clevertap.android.sdk.validation.ManifestValidator;
 import com.clevertap.android.sdk.validation.ValidationResult;
+import com.clevertap.android.sdk.variables.CTVariables;
+import com.clevertap.android.sdk.variables.Var;
+import com.clevertap.android.sdk.variables.callbacks.FetchVariablesCallback;
+import com.clevertap.android.sdk.variables.callbacks.VariablesChangedCallback;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.firebase.messaging.FirebaseMessaging;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -64,8 +79,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 
 /**
@@ -134,6 +147,8 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
 
     private static NotificationHandler sSignedCallNotificationHandler;
 
+    private static HashMap<String,NotificationRenderedListener> sNotificationRenderedListenerMap = new HashMap<>();
+
     private final Context context;
 
     private CoreState coreState;
@@ -155,6 +170,7 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
 
     /**
      * This method is used to change the credentials of CleverTap account Id, token and region programmatically
+     * Once the SDK is initialized with a default instance, subsequent calls to this method will be ignored.
      *
      * @param accountID CleverTap Account Id
      * @param token     CleverTap Account Token
@@ -170,6 +186,27 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         }
 
         ManifestInfo.changeCredentials(accountID, token, region);
+    }
+
+    /**
+     * This method is used to change the credentials of CleverTap account Id, token, proxyDomain and spikyProxyDomain programmatically
+     *
+     * @param accountID         CleverTap Account Id
+     * @param token             CleverTap Account Token
+     * @param proxyDomain       CleverTap Proxy Domain
+     * @param spikyProxyDomain  CleverTap Spiky Proxy Domain
+     */
+    public static void changeCredentials(String accountID, String token, String proxyDomain, String spikyProxyDomain) {
+        if (defaultConfig != null) {
+            Logger.i("CleverTap SDK already initialized with accountID:" + defaultConfig.getAccountId()
+                    + ", token:" + defaultConfig.getAccountToken() + ", proxyDomain: " + defaultConfig.getProxyDomain() +
+                    " and spikyDomain: " + defaultConfig.getSpikyProxyDomain() +
+                    ". Cannot change credentials to accountID: " + accountID +
+                    ", token: " + token + ", proxyDomain: " + proxyDomain + "and spikyProxyDomain: " + spikyProxyDomain);
+            return;
+        }
+
+        ManifestInfo.changeCredentials(accountID, token, proxyDomain, spikyProxyDomain);
     }
 
     /**
@@ -192,6 +229,11 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
      * Use this method when implementing your own FCM handling mechanism. Refer to the
      * SDK documentation for usage scenarios and examples.
      *
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     * Note: Starting from core v5.1.0, this method runs on the caller's thread. Make sure to call it
+     * in onMessageReceive() of messaging service.
+     * </p>
+     *
      * @param context        A reference to an Android context
      * @param extras         The {@link Bundle} object received by the broadcast receiver
      * @param notificationId A custom id to build a notification
@@ -205,18 +247,10 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
             CleverTapInstanceConfig config = coreState.getConfig();
 
             try {
-                Task<Void> task = CTExecutorFactory.executors(config).postAsyncSafelyTask();
-                task.execute("CleverTapAPI#createNotification",
-                        new Callable<Void>() {
-                            @Override
-                            public Void call() {
-                                synchronized (coreState.getPushProviders().getPushRenderingLock()) {
-                                    coreState.getPushProviders().setPushNotificationRenderer(new CoreNotificationRenderer());
-                                    coreState.getPushProviders()._createNotification(context, extras, notificationId);
-                                }
-                                return null;
-                            }
-                        });
+                synchronized (coreState.getPushProviders().getPushRenderingLock()) {
+                    coreState.getPushProviders().setPushNotificationRenderer(new CoreNotificationRenderer());
+                    coreState.getPushProviders()._createNotification(context, extras, notificationId);
+                }
             } catch (Throwable t) {
                 config.getLogger().debug(config.getAccountId(), "Failed to process createNotification()", t);
             }
@@ -248,6 +282,11 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
      * <p/>
      * Use this method when implementing your own FCM handling mechanism. Refer to the
      * SDK documentation for usage scenarios and examples.
+     *
+     *  <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: Starting from core v5.1.0, this method runs on the caller's thread. Make sure to call it
+     *      in onMessageReceive() of messaging service.
+     *</p>
      *
      * @param context A reference to an Android context
      * @param extras  The {@link Bundle} object received by the broadcast receiver
@@ -962,7 +1001,6 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
             }
         }
     }
-
     private static CleverTapAPI fromBundle(final Context context, final Bundle extras) {
         String _accountId = extras.getString(Constants.WZRK_ACCT_ID_KEY);
         return fromAccountId(context, _accountId);
@@ -1029,6 +1067,46 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     public static void tokenRefresh(Context context, String token, PushType pushType) {
         for (CleverTapAPI instance : getAvailableInstances(context)) {
             instance.coreState.getPushProviders().doTokenRefresh(token, pushType);
+        }
+    }
+
+    /**
+     * Checks whether notification permission is granted or denied for Android 13 and above devices.
+     * @return boolean Returns true/false based on whether permission is granted or denied.
+     */
+    @SuppressLint("NewApi")
+    public boolean isPushPermissionGranted(){
+        if (isPackageAndOsTargetsAbove(context, 32)) {
+            return coreState.getInAppController().isPushPermissionGranted();
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Calls the push primer flow for Android 13 and above devices.
+     * @param jsonObject JSONObject - Accepts jsonObject created by {@link CTLocalInApp} object
+     */
+    @SuppressLint("NewApi")
+    public void promptPushPrimer(JSONObject jsonObject) {
+        if (isPackageAndOsTargetsAbove(context, 32)) {
+            coreState.getInAppController().promptPushPrimer(jsonObject);
+        } else {
+            Logger.v("Ensure your app supports Android 13 to verify permission access for notifications.");
+        }
+    }
+
+    /**
+     * Calls directly hard permission dialog, if push primer is not required.
+     * @param showFallbackSettings - boolean - If `showFallbackSettings` is true then we show a alert
+     *                             dialog which routes to app's notification settings page.
+     */
+    @SuppressLint("NewApi")
+    public void promptForPushPermission(boolean showFallbackSettings){
+        if (isPackageAndOsTargetsAbove(context, 32)) {
+            coreState.getInAppController().promptPermission(showFallbackSettings);
+        } else {
+            Logger.v("Ensure your app supports Android 13 to verify permission access for notifications.");
         }
     }
 
@@ -1153,6 +1231,19 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     }
 
     /**
+     * Deletes multiple {@link CTInboxMessage} objects for given list of messageIDs
+     *
+     * @param messageIDs {@link ArrayList} with String values - list of messageIDs of {@link CTInboxMessage} public object of inbox message
+     */
+    public void deleteInboxMessagesForIDs(final ArrayList<String> messageIDs){
+        if (coreState.getControllerManager().getCTInboxController() != null) {
+            coreState.getControllerManager().getCTInboxController().deleteInboxMessagesForIDs(messageIDs);
+        } else {
+            getConfigLogger().debug(getAccountId(), "Notification Inbox not initialized");
+        }
+    }
+
+    /**
      * Disables the Profile/Events Read and Synchronization API
      * Personalization is enabled by default
      */
@@ -1199,9 +1290,13 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     }
 
     /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
      * @return object of {@link CTFeatureFlagsController}
      * Handler to get the feature flag values
      */
+    @Deprecated
     public CTFeatureFlagsController featureFlag() {
         if (getConfig().isAnalyticsOnly()) {
             getConfig().getLogger()
@@ -1574,8 +1669,6 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         return coreState.getLocalDataStore().getEventHistory(context);
     }
 
-    //DeepLink
-
     /**
      * Returns the InAppNotificationListener object
      *
@@ -1594,6 +1687,37 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     @SuppressWarnings({"unused"})
     public void setInAppNotificationListener(InAppNotificationListener inAppNotificationListener) {
         coreState.getCallbackManager().setInAppNotificationListener(inAppNotificationListener);
+    }
+
+    /**
+     * This method unregisters the given instance of the PushPermissionResponseListener if
+     * previously registered.
+     * <p>
+     * Use this method to stop observing the push permission result.
+     *
+     * @param pushPermissionResponseListener An {@link PushPermissionResponseListener} object
+     */
+    @SuppressWarnings({"unused"})
+    public void unregisterPushPermissionNotificationResponseListener(PushPermissionResponseListener
+                                                                           pushPermissionResponseListener) {
+        coreState.getCallbackManager().
+                unregisterPushPermissionResponseListener(pushPermissionResponseListener);
+    }
+
+    /**
+     * This method registers the PushPermissionNotificationResponseListener.
+     * <p>
+     * Call this method only from the onCreate() of the activity/fragment and unregister the
+     * listener from the onDestroy() method using the
+     * {@link #unregisterPushPermissionNotificationResponseListener(PushPermissionResponseListener)}
+     *
+     * @param pushPermissionResponseListener An {@link PushPermissionResponseListener} object
+     */
+    @SuppressWarnings({"unused"})
+    public void registerPushPermissionNotificationResponseListener(PushPermissionResponseListener
+                                                                          pushPermissionResponseListener) {
+        coreState.getCallbackManager().
+                registerPushPermissionResponseListener(pushPermissionResponseListener);
     }
 
     /**
@@ -1855,21 +1979,35 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         markReadInboxMessage(message);
     }
 
+    /**
+     * Marks multiple {@link CTInboxMessage} objects as read for given list of messageIDs
+     *
+     * @param messageIDs {@link ArrayList} with String values - list of messageIDs of {@link CTInboxMessage} public object of inbox message
+     */
+    public void markReadInboxMessagesForIDs(final ArrayList<String> messageIDs){
+        if (coreState.getControllerManager().getCTInboxController() != null) {
+            coreState.getControllerManager().getCTInboxController().markReadInboxMessagesForIDs(messageIDs);
+        } else {
+            getConfigLogger().debug(getAccountId(), "Notification Inbox not initialized");
+        }
+    }
+
     @Override
-    public void messageDidClick(CTInboxActivity ctInboxActivity, CTInboxMessage inboxMessage, Bundle data, HashMap<String, String> keyValue, boolean isBodyClick) {
+    public void messageDidClick(CTInboxActivity ctInboxActivity, int contentPageIndex, CTInboxMessage inboxMessage, Bundle data, HashMap<String, String> keyValue, int buttonIndex) {
 
         coreState.getAnalyticsManager().pushInboxMessageStateEvent(true, inboxMessage, data);
 
+        Logger.v("clicked inbox notification.");
+        //notify the onInboxItemClicked callback if the listener is set.
+        if (inboxMessageListener != null && inboxMessageListener.get() != null) {
+            inboxMessageListener.get().onInboxItemClicked(inboxMessage, contentPageIndex, buttonIndex);
+        }
+
         if (keyValue != null && !keyValue.isEmpty()) {
             Logger.v("clicked button of an inbox notification.");
+            //notify the onInboxButtonClick callback if the listener is set.
             if (inboxMessageButtonListener != null && inboxMessageButtonListener.get() != null) {
                 inboxMessageButtonListener.get().onInboxButtonClick(keyValue);
-            }
-        }
-        else{
-            Logger.v("clicked inbox notification.");
-            if (isBodyClick && inboxMessageListener != null && inboxMessageListener.get() != null) {
-                inboxMessageListener.get().onInboxItemClicked(inboxMessage);
             }
         }
     }
@@ -1964,11 +2102,15 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     }
 
     /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
      * The handle for product config functionalities(fetch/activate etc.)
      *
      * @return - the instance of {@link CTProductConfigController}
      */
     @SuppressWarnings("WeakerAccess")
+    @Deprecated
     public CTProductConfigController productConfig() {
         if (getConfig().isAnalyticsOnly()) {
             getConfig().getLogger().debug(getAccountId(),
@@ -2367,23 +2509,32 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     }
 
     /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
+     *
      * This method is used to set the CTFeatureFlagsListener
      * Register to receive feature flag callbacks
      *
      * @param featureFlagsListener The {@link CTFeatureFlagsListener} object
      */
     @SuppressWarnings("unused")
+    @Deprecated
     public void setCTFeatureFlagsListener(CTFeatureFlagsListener featureFlagsListener) {
         coreState.getCallbackManager().setFeatureFlagListener(featureFlagsListener);
     }
 
     /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
      * This method is used to set the product config listener
      * Register to receive callbacks
      *
      * @param listener The {@link CTProductConfigListener} instance
      */
     @SuppressWarnings("unused")
+    @Deprecated
     public void setCTProductConfigListener(CTProductConfigListener listener) {
         coreState.getCallbackManager().setProductConfigListener(listener);
     }
@@ -2415,13 +2566,18 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     }
 
     @RestrictTo(Scope.LIBRARY_GROUP)
-    public void setNotificationRenderedListener(final NotificationRenderedListener notificationRenderedListener) {
-        coreState.getCallbackManager().setNotificationRenderedListener(notificationRenderedListener);
+    public static void addNotificationRenderedListener(String id, final NotificationRenderedListener notificationRenderedListener) {
+       sNotificationRenderedListenerMap.put(id, notificationRenderedListener);
     }
 
     @RestrictTo(Scope.LIBRARY_GROUP)
-    public NotificationRenderedListener getNotificationRenderedListener() {
-        return coreState.getCallbackManager().getNotificationRenderedListener();
+    public static NotificationRenderedListener getNotificationRenderedListener(String id) {
+       return sNotificationRenderedListenerMap.get(id);
+    }
+
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public static NotificationRenderedListener removeNotificationRenderedListener(String id) {
+       return sNotificationRenderedListenerMap.remove(id);
     }
 
     /**
@@ -2566,6 +2722,25 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     }
 
     /**
+     * Dismisses the App Inbox Activity if already opened
+     */
+    public void dismissAppInbox() {
+        try {
+            Activity appInboxActivity = getCoreState().getCoreMetaData().getAppInboxActivity();
+            if (appInboxActivity == null) {
+                throw new IllegalStateException("AppInboxActivity reference not found");
+            }
+            if (!appInboxActivity.isFinishing()) {
+                getConfigLogger().verbose(getAccountId(), "Finishing the App Inbox");
+                appInboxActivity.finish();
+            }
+        } catch (Throwable t) {
+            getConfigLogger().verbose(getAccountId(), "Can't dismiss AppInbox, please ensure to call this method after the usage of " +
+                    "cleverTapApiInstance.showAppInbox(). \n" + t);
+        }
+    }
+
+    /**
      * Opens {@link CTInboxActivity} to display Inbox Messages with default {@link CTInboxStyleConfig} object
      */
     @SuppressWarnings({"unused"})
@@ -2623,6 +2798,7 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
                     .setInAppFCManager(new InAppFCManager(context, coreState.getConfig(), deviceId));
         }
 
+        //todo : replace with variables
         /**
          * Reinitialising product config & Feature Flag controllers with device id, if it's null
          * during first initialisation from CleverTapFactory.getCoreState()
@@ -2635,6 +2811,7 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
                     "Initializing Feature Flags after Device ID Created = " + deviceId);
             ctFeatureFlagsController.setGuidAndInit(deviceId);
         }
+        //todo: replace with variables
         CTProductConfigController ctProductConfigController = coreState.getControllerManager()
                 .getCTProductConfigController();
 
@@ -2800,7 +2977,8 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         }
     }
 
-    private static ArrayList<CleverTapAPI> getAvailableInstances(Context context) {
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public static ArrayList<CleverTapAPI> getAvailableInstances(Context context) {
         ArrayList<CleverTapAPI> apiArrayList = new ArrayList<>();
         if (instances == null || instances.isEmpty()) {
             CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(context);
@@ -2824,6 +3002,8 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         String accountId = manifest.getAccountId();
         String accountToken = manifest.getAcountToken();
         String accountRegion = manifest.getAccountRegion();
+        String proxyDomain = manifest.getProxyDomain();
+        String spikyProxyDomain = manifest.getSpikeyProxyDomain();
         if (accountId == null || accountToken == null) {
             Logger.i(
                     "Account ID or Account token is missing from AndroidManifest.xml, unable to create default instance");
@@ -2832,9 +3012,15 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         if (accountRegion == null) {
             Logger.i("Account Region not specified in the AndroidManifest - using default region");
         }
+        CleverTapInstanceConfig defaultInstanceConfig = CleverTapInstanceConfig.createDefaultInstance(context, accountId, accountToken, accountRegion);
 
-        return CleverTapInstanceConfig.createDefaultInstance(context, accountId, accountToken, accountRegion);
-
+        if (proxyDomain != null && proxyDomain.trim().length() > 0) {
+            defaultInstanceConfig.setProxyDomain(proxyDomain);
+        }
+        if (spikyProxyDomain != null && spikyProxyDomain.trim().length() > 0) {
+            defaultInstanceConfig.setSpikyProxyDomain(spikyProxyDomain);
+        }
+        return defaultInstanceConfig;
     }
 
     private static @Nullable
@@ -2888,14 +3074,15 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     }
 
     //TODO: start synchronizing entire flow from here
-    public void renderPushNotification(@NonNull INotificationRenderer iNotificationRenderer, Context context,
+    public Future<?> renderPushNotification(@NonNull INotificationRenderer iNotificationRenderer, Context context,
             Bundle extras) {
 
         CleverTapInstanceConfig config = coreState.getConfig();
+        Future<?> future = null;
 
         try {
             Task<Void> task = CTExecutorFactory.executors(config).postAsyncSafelyTask();
-            task.execute("CleverTapAPI#renderPushNotification",
+            future = task.submit("CleverTapAPI#renderPushNotification",
                     new Callable<Void>() {
                         @Override
                         public Void call() {
@@ -2904,14 +3091,45 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
 
                                 if (extras != null && extras.containsKey(Constants.PT_NOTIF_ID)) {
                                     coreState.getPushProviders()
-                                            ._createNotification(context, extras, extras.getInt(Constants.PT_NOTIF_ID));
+                                            ._createNotification(context, extras,
+                                                    extras.getInt(Constants.PT_NOTIF_ID));
                                 } else {
-                                    coreState.getPushProviders()._createNotification(context, extras, Constants.EMPTY_NOTIFICATION_ID);
+                                    coreState.getPushProviders()
+                                            ._createNotification(context, extras, Constants.EMPTY_NOTIFICATION_ID);
                                 }
                             }
                             return null;
                         }
                     });
+        } catch (Throwable t) {
+            config.getLogger().debug(config.getAccountId(), "Failed to process renderPushNotification()", t);
+        }
+
+        return future;
+
+    }
+
+    @RestrictTo(Scope.LIBRARY_GROUP)
+    public void renderPushNotificationOnCallerThread(@NonNull INotificationRenderer iNotificationRenderer, Context context,
+            Bundle extras) {
+
+        CleverTapInstanceConfig config = coreState.getConfig();
+
+        try {
+            synchronized (coreState.getPushProviders().getPushRenderingLock()) {
+                config.getLogger().verbose(config.getAccountId(),
+                        "rendering push on caller thread with id = " + Thread.currentThread().getId());
+                coreState.getPushProviders().setPushNotificationRenderer(iNotificationRenderer);
+
+                if (extras != null && extras.containsKey(Constants.PT_NOTIF_ID)) {
+                    coreState.getPushProviders()
+                            ._createNotification(context, extras,
+                                    extras.getInt(Constants.PT_NOTIF_ID));
+                } else {
+                    coreState.getPushProviders()
+                            ._createNotification(context, extras, Constants.EMPTY_NOTIFICATION_ID);
+                }
+            }
         } catch (Throwable t) {
             config.getLogger().debug(config.getAccountId(), "Failed to process renderPushNotification()", t);
         }
@@ -2955,5 +3173,290 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
      */
     public static @XiaomiPush int getEnableXiaomiPushOn() {
         return PushType.XPS.getRunningDevices();
+    }
+
+    /**
+     * Retrieves a notification bitmap with a specified timeout and size constraint.
+     *
+     * @param context           The context of the application. Must be non null.
+     * @param bundle            The {@link Bundle} object received by the push receiver. Must be non null.
+     * @param bitmapSrcUrl      The URL of the bitmap to download.
+     * @param fallbackToAppIcon Specifies whether to fallback to the app icon if the bitmap is not available.
+     * @param timeoutInMillis   The timeout duration for the bitmap download in milliseconds.  Must be in range of 1 - 20000.
+     * @param sizeInBytes       The maximum size of the bitmap in bytes. Must be greater than 0.
+     * @return The downloaded bitmap or null if it couldn't be downloaded or doesn't exist.
+     *
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method must be called on background thread.
+     *</p>
+     */
+    public static @Nullable Bitmap getNotificationBitmapWithTimeoutAndSize(
+            final Context context, final Bundle bundle, String bitmapSrcUrl,
+            boolean fallbackToAppIcon, long timeoutInMillis, int sizeInBytes) {
+
+        if (checkNotificationBitmapRequestInvalid(context, bundle, timeoutInMillis)) return null;
+
+        if (sizeInBytes < 1) {
+            Logger.v("Given sizeInBytes is less than 1 bytes. Not downloading bitmap!");
+            return null;
+        }
+
+        CleverTapAPI cleverTapAPI = fromBundle(context, bundle);
+        if (cleverTapAPI == null) {
+            Logger.v("cleverTapAPI is null. Not downloading bitmap!");
+            return null;
+        }
+
+        return Utils.getNotificationBitmapWithTimeoutAndSize(bitmapSrcUrl, fallbackToAppIcon, context, cleverTapAPI.getConfig(),
+                timeoutInMillis, sizeInBytes).getBitmap();
+    }
+
+    private static boolean checkNotificationBitmapRequestInvalid(Context context, Bundle bundle, long timeoutInMillis) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            Logger.v("Notification Bitmap Download is not allowed on main thread");
+            return true;
+        }
+        if (context == null) {
+            Logger.v("Given Context is null. Not downloading bitmap!");
+            return true;
+        }
+        if (bundle == null) {
+            Logger.v("Given Bundle is null. Not downloading bitmap!");
+            return true;
+        }
+        if (timeoutInMillis < 1) {
+            Logger.v("Given timeoutInMillis is less than 1 millis. Not downloading bitmap!");
+            return true;
+        }
+        if (timeoutInMillis > 20000) {
+            Logger.v("Given timeoutInMillis exceeds 20 secs limit. Not downloading bitmap!");
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Retrieves a notification bitmap with a specified timeout.
+     *
+     * @param context           The context of the application. Must be non null.
+     * @param bundle            The {@link Bundle} object received by the push receiver. Must be non null.
+     * @param bitmapSrcUrl      The URL of the bitmap to download.
+     * @param fallbackToAppIcon Specifies whether to fallback to the app icon if the bitmap is not available.
+     * @param timeoutInMillis   The timeout duration for the bitmap download in milliseconds.  Must be in range of 1 - 20000.
+     * @return The downloaded bitmap or null if it couldn't be downloaded or doesn't exist.
+     *
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     * Note: This method must be called on background thread.
+     * </p>
+     */
+    public static @Nullable Bitmap getNotificationBitmapWithTimeout(
+            final Context context, final Bundle bundle, String bitmapSrcUrl,
+            boolean fallbackToAppIcon, long timeoutInMillis) {
+
+        if (checkNotificationBitmapRequestInvalid(context, bundle, timeoutInMillis)) return null;
+
+        CleverTapAPI cleverTapAPI = fromBundle(context, bundle);
+        if (cleverTapAPI == null) {
+            Logger.v("cleverTapAPI is null. Not downloading bitmap!");
+            return null;
+        }
+
+        return Utils.getNotificationBitmapWithTimeout(bitmapSrcUrl, fallbackToAppIcon, context, cleverTapAPI.getConfig(),
+                timeoutInMillis).getBitmap();
+    }
+
+    /**
+     * Check if your app is in development mode. <br>
+     * the following function: {@link CleverTapAPI#syncVariables()} will only work if the app is in
+     * development mode and profile is set as a test profile in CT Dashboard.
+     *
+     * @return boolean True if development mode, false otherwise.
+     */
+    boolean isDevelopmentMode() {
+        return CTVariables.isDevelopmentMode(context);
+    }
+
+    /**
+     * Defines a new variable. If the default vale is null it won't resolve the type properly. In
+     * that case it is better to use the @Variable annotation instead of this method.
+     *
+     * @param name Name of the variable.
+     * @param defaultValue Default value of variable, used when resolving the underlying value type.
+     * @param <T> Type of value.
+     * @return Returns the Var instance.
+     */
+    public <T> Var<T> defineVariable(String name, T defaultValue) {
+        return Var.define(name, defaultValue,coreState.getCTVariables());
+    }
+
+    /**
+     * Parses the @Variable annotated fields from a given instance or multiple instances.
+     *
+     * @param instances Instance or instances to parse.
+     */
+    public void parseVariables(Object... instances) {
+        coreState.getParser().parseVariables(instances);
+    }
+
+    /**
+     * Parses the @Variable annotated static fields from a given class or multiple classes.
+     *
+     * @param classes Class object or objects to parse.
+     */
+    public void parseVariablesForClasses(Class<?>... classes) {
+        coreState.getParser().parseVariablesForClasses(classes);
+    }
+
+    /**
+     * Get a copy of the current value of a variable or a group.
+     *
+     * @param name The name of the variable or the group.
+     * @return The value of the variable or the group.
+     */
+    public Object getVariableValue(String name) {
+        if (name == null) {
+            return null;
+        }
+        return coreState.getVarCache().getMergedValue(name);
+    }
+
+    /**
+     * Get an instance of a variable or a group.
+     *
+     * @param name The name of the variable or the group.
+     * @return The instance of the variable or the group, or null if not created yet.
+     */
+    public <T> Var<T> getVariable(String name) {
+        if (name == null) {
+            return null;
+        }
+        return coreState.getVarCache().getVariable(name);
+    }
+
+    /**
+     * Fetches variable values from server.
+     */
+    public void fetchVariables() {
+        fetchVariables(null);
+    }
+
+    /**
+     * Fetches variable values from server.
+     * Note that SDK keeps only one registered callback, if you call that method again it would
+     * override the callback.
+     *
+     * @param callback Callback instance to be invoked when fetching is done.
+     */
+    public void fetchVariables(FetchVariablesCallback callback) {
+        if (coreState.getConfig().isAnalyticsOnly()) {
+            return;
+        }
+        Logger.v("variables", "Fetching  variables");
+        if (callback != null) {
+            coreState.getCallbackManager().setFetchVariablesCallback(callback);
+        }
+
+        JSONObject event = new JSONObject();
+        JSONObject notif = new JSONObject();
+        try {
+            notif.put("t", Constants.FETCH_TYPE_VARIABLES);
+            event.put("evtName", Constants.WZRK_FETCH);
+            event.put("evtData", notif);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        coreState.getAnalyticsManager().sendFetchEvent(event);
+    }
+
+    /**
+     * Uploads variables to server.
+     */
+    public void syncVariables() {
+        if (isDevelopmentMode()) {
+            Logger.v("variables", "syncVariables: waiting for id to be available");
+            getCleverTapID(x -> {
+                JSONObject js = coreState.getVarCache().getDefineVarsData();
+                Logger.v("variables", "syncVariables: sending following vars to server:" + js);
+                coreState.getAnalyticsManager().pushDefineVarsEvent(js);
+            });
+        } else {
+            Logger.v("variables", "Your app is NOT in development mode, variables data will not be sent to server");
+        }
+    }
+
+    /**
+     * Adds a callback to be invoked when variables are initialised with server values.
+     * Will be called each time new values are fetched.
+     *
+     * @param callback Callback to register.
+     */
+    public void addVariablesChangedCallback(@NonNull VariablesChangedCallback callback) {
+        coreState.getCTVariables().addVariablesChangedCallback(callback);
+    }
+
+    /**
+     * Adds a callback to be invoked when variables are initialised with server values. Will be
+     * called only once and then removed.
+     *
+     * @param callback Callback to register.
+     */
+    public void addOneTimeVariablesChangedCallback(@NonNull VariablesChangedCallback callback) {
+        coreState.getCTVariables().addOneTimeVariablesChangedCallback(callback);
+    }
+
+    /**
+     * Removes previously registered callback.
+     *
+     * @param callback Callback to remove.
+     */
+    public void removeVariablesChangedCallback(@NonNull VariablesChangedCallback callback) {
+        coreState.getCTVariables().removeVariablesChangedCallback(callback);
+    }
+
+    /**
+     * Removes previously registered callback.
+     *
+     * @param callback Callback to remove.
+     */
+    public void removeOneTimeVariablesChangedCallback(@NonNull VariablesChangedCallback callback) {
+        coreState.getCTVariables().removeOneTimeVariablesChangedHandler(callback);
+    }
+
+    /**
+     *  Removes all previously registered callbacks.
+     */
+    public void removeAllVariablesChangedCallbacks() {
+        coreState.getCTVariables().removeAllVariablesChangedCallbacks();
+    }
+
+    /**
+     *  Removes all previously registered one time callbacks.
+     */
+    public void removeAllOneTimeVariablesChangedCallbacks() {
+        coreState.getCTVariables().removeAllOneTimeVariablesChangedCallbacks();
+    }
+
+    /**
+     * Use this method to set a custom locale for the current CleverTap instance
+     *
+     * @param locale - The custom locale to be set
+     */
+    @SuppressWarnings({"unused"})
+    public void setLocale(String locale) {
+        if(TextUtils.isEmpty(locale)) {
+            Logger.i("Empty Locale provided for setLocale, not setting it");
+            return;
+        }
+        coreState.getDeviceInfo().setCustomLocale(locale);
+    }
+
+    /**
+     * Returns the custom locale set for the current CleverTap instance
+     *
+     * @return The customLocale string value
+     */
+    @SuppressWarnings({"unused"})
+    public String getLocale() {
+        return coreState.getDeviceInfo().getCustomLocale();
     }
 }

@@ -75,6 +75,8 @@ object Libs {
 
     const val clevertap_android_sdk: String = "com.clevertap.android:clevertap-android-sdk:_"
 
+    const val clevertap_rendermax_sdk: String = "com.clevertap.android:clevertap-rendermax-sdk:_"
+
     const val clevertap_geofence_sdk: String = "com.clevertap.android:clevertap-geofence-sdk:_"
 
     const val clevertap_hms_sdk: String = "com.clevertap.android:clevertap-hms-sdk:_"
@@ -177,10 +179,10 @@ object Libs {
 object Android {
 
     // Android SDK
-    const val compileSdkVersionVal = 31
-    const val targetSdkVersionVal = 31
-    const val buildToolsVersionVal = "30.0.3"
-    const val minSdkVersionVal = 16
+    const val compileSdkVersionVal = 33
+    const val targetSdkVersionVal = 33
+    const val buildToolsVersionVal = "33.0.0"
+    const val minSdkVersionVal = 19
 }
 
 object SDKTest {

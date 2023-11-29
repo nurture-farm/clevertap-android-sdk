@@ -1,8 +1,8 @@
 package com.clevertap.android.pushtemplates
 
 import android.app.NotificationManager
-import android.content.ContentResolver
 import android.app.PendingIntent
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -21,9 +21,9 @@ import com.clevertap.android.pushtemplates.validators.ValidatorFactory
 import com.clevertap.android.sdk.CleverTapAPI
 import com.clevertap.android.sdk.CleverTapInstanceConfig
 import com.clevertap.android.sdk.Constants
-import com.clevertap.android.sdk.interfaces.AudibleNotification
 import com.clevertap.android.sdk.Logger
 import com.clevertap.android.sdk.ManifestInfo
+import com.clevertap.android.sdk.interfaces.AudibleNotification
 import com.clevertap.android.sdk.pushnotification.CTNotificationIntentService
 import com.clevertap.android.sdk.pushnotification.INotificationRenderer
 import com.clevertap.android.sdk.pushnotification.PushNotificationHandler
@@ -190,6 +190,9 @@ class TemplateRenderer : INotificationRenderer, AudibleNotification {
                 return InputBoxStyle(this).builderFromStyle(context, extras, notificationId, nb)
 
             TemplateType.CANCEL -> renderCancelNotification(context)
+            else -> {
+                PTLog.verbose("operation not defined!")
+            }
         }
         return null
     }
@@ -548,7 +551,7 @@ class TemplateRenderer : INotificationRenderer, AudibleNotification {
                         actionLaunchIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                     }
                     var actionIntent: PendingIntent?
-                    val requestCode = System.currentTimeMillis().toInt() + i
+                    val requestCode = Random().nextInt()
                     var flagsActionLaunchPendingIntent = PendingIntent.FLAG_UPDATE_CURRENT
                     if (VERSION.SDK_INT >= VERSION_CODES.M) {
                         flagsActionLaunchPendingIntent =

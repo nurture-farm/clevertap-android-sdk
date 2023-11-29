@@ -13,6 +13,7 @@ import com.clevertap.android.sdk.DeviceInfo;
 import com.clevertap.android.sdk.LocalDataStore;
 import com.clevertap.android.sdk.Logger;
 import com.clevertap.android.sdk.SessionManager;
+import com.clevertap.android.sdk.cryption.CryptHandler;
 import com.clevertap.android.sdk.db.BaseDatabaseManager;
 import com.clevertap.android.sdk.db.DBManager;
 import com.clevertap.android.sdk.events.BaseEventQueueManager;
@@ -62,6 +63,8 @@ public class LoginController {
 
     private String processingUserLoginIdentifier = null;
 
+    private final CryptHandler cryptHandler;
+
     private static final Object processingUserLoginLock = new Object();
 
     public LoginController(Context context,
@@ -76,7 +79,8 @@ public class LoginController {
             LocalDataStore localDataStore,
             BaseCallbackManager callbackManager,
             DBManager dbManager,
-            CTLockManager ctLockManager) {
+            CTLockManager ctLockManager,
+            CryptHandler cryptHandler) {
         this.config = config;
         this.context = context;
         this.deviceInfo = deviceInfo;
@@ -91,6 +95,7 @@ public class LoginController {
         this.dbManager = dbManager;
         this.controllerManager = controllerManager;
         this.ctLockManager = ctLockManager;
+        this.cryptHandler = cryptHandler;
     }
 
     public void asyncProfileSwitchUser(final Map<String, Object> profile, final String cacheGuid,
@@ -130,6 +135,7 @@ public class LoginController {
                     callbackManager.notifyUserProfileInitialized(deviceInfo.getDeviceID());
                     deviceInfo
                             .setCurrentUserOptOutStateFromStorage(); // be sure to call this after the guid is updated
+                    resetVariables(); // variables for new user are fetched with App Launched
                     analyticsManager.forcePushAppLaunchedEvent();
                     if (profile != null) {
                         analyticsManager.pushProfile(profile);
@@ -186,8 +192,7 @@ public class LoginController {
             }
 
             boolean haveIdentifier = false;
-            LoginInfoProvider loginInfoProvider = new LoginInfoProvider(context,
-                    config, deviceInfo);
+            LoginInfoProvider loginInfoProvider = new LoginInfoProvider(context, config, deviceInfo, cryptHandler);
             // check for valid identifier keys
             // use the first one we find
             IdentityRepo iProfileHandler = IdentityRepoFactory
@@ -313,6 +318,12 @@ public class LoginController {
                         callbackManager);
         controllerManager.setCTProductConfigController(ctProductConfigController);
         config.getLogger().verbose(config.getAccountId(), "Product Config reset");
+    }
+
+    private void resetVariables() {
+        if (controllerManager.getCtVariables() != null) {
+            controllerManager.getCtVariables().clearUserContent();
+        }
     }
 
     public void clearData(final String cleverTapID, final CTEventNotifier eventNotifier) {

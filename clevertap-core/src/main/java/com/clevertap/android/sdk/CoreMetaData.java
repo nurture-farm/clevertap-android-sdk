@@ -19,6 +19,8 @@ public class CoreMetaData extends CleverTapMetaData {
 
     private static WeakReference<Activity> currentActivity;
 
+    private WeakReference<Activity> appInboxActivity;
+
     private static int activityCount = 0;
 
     private long appInstallTime = 0;
@@ -54,9 +56,16 @@ public class CoreMetaData extends CleverTapMetaData {
     private boolean offline;
 
     /**
+     * Flag indicating whether the {@link CTWebInterface} is initialized from outside of the SDK.
+     * <p>
+     * When this flag is true, it means that the {@link CTWebInterface} has been initialized externally, typically by the application.
+     * </p>
+     */
+    private boolean webInterfaceInitializedExternally;
+
+    /**
      * Last notification received on device from CleverTap in an active session of a process(before process is killed)
      */
-    private String lastNotificationId;
 
     private final Object optOutFlagLock = new Object();
 
@@ -73,15 +82,6 @@ public class CoreMetaData extends CleverTapMetaData {
     public static Activity getCurrentActivity() {
         return (currentActivity == null) ? null : currentActivity.get();
     }
-
-    public String getLastNotificationId() {
-        return lastNotificationId;
-    }
-
-    void setLastNotificationId(final String lastNotificationId) {
-        this.lastNotificationId = lastNotificationId;
-    }
-
     static int getInitialAppEnteredForegroundTime() {
         return initialAppEnteredForegroundTime;
     }
@@ -99,6 +99,14 @@ public class CoreMetaData extends CleverTapMetaData {
     public static String getCurrentActivityName() {
         Activity current = getCurrentActivity();
         return (current != null) ? current.getLocalClassName() : null;
+    }
+
+    public void setAppInboxActivity(@Nullable Activity activity) {
+        appInboxActivity = new WeakReference<>(activity);
+    }
+
+    public Activity getAppInboxActivity() {
+        return (appInboxActivity == null) ? null : appInboxActivity.get();
     }
 
     public static boolean isAppForeground() {
@@ -329,6 +337,14 @@ public class CoreMetaData extends CleverTapMetaData {
 
     public boolean isOffline() {
         return offline;
+    }
+
+    public void setWebInterfaceInitializedExternally(boolean isInitialized) {
+        this.webInterfaceInitializedExternally = isInitialized;
+    }
+
+    public boolean isWebInterfaceInitializedExternally() {
+        return webInterfaceInitializedExternally;
     }
 
     public static void setActivityCount(final int count) {

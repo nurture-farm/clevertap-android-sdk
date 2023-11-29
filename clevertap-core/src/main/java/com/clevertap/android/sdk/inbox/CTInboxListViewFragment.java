@@ -1,5 +1,7 @@
 package com.clevertap.android.sdk.inbox;
 
+import static com.clevertap.android.sdk.Constants.APP_INBOX_ITEM_INDEX;
+
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
@@ -25,6 +27,7 @@ import com.clevertap.android.sdk.CTInboxStyleConfig;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.CleverTapInstanceConfig;
 import com.clevertap.android.sdk.Constants;
+import com.clevertap.android.sdk.DidClickForHardPermissionListener;
 import com.clevertap.android.sdk.Logger;
 import com.clevertap.android.sdk.R;
 import com.clevertap.android.sdk.Utils;
@@ -41,8 +44,8 @@ public class CTInboxListViewFragment extends Fragment {
 
     interface InboxListener {
 
-        void messageDidClick(Context baseContext, CTInboxMessage inboxMessage, Bundle data,
-                HashMap<String, String> keyValue,boolean isBodyClick);
+        void messageDidClick(Context baseContext, int contentPageIndex, CTInboxMessage inboxMessage, Bundle data,
+                HashMap<String, String> keyValue, int buttonIndex);
 
         void messageDidShow(Context baseContext, CTInboxMessage inboxMessage, Bundle data);
     }
@@ -69,6 +72,8 @@ public class CTInboxListViewFragment extends Fragment {
 
     private int tabPosition;
 
+    private DidClickForHardPermissionListener didClickForHardPermissionListener;
+
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
@@ -80,6 +85,11 @@ public class CTInboxListViewFragment extends Fragment {
             updateInboxMessages();
             if (context instanceof CTInboxActivity) {
                 setListener((CTInboxListViewFragment.InboxListener) getActivity());
+            }
+            /*Initializes the below listener only when inbox payload has CTInbox activity as their host activity
+            when requesting permission for notification.*/
+            if (context instanceof DidClickForHardPermissionListener) {
+                didClickForHardPermissionListener = (DidClickForHardPermissionListener) context;
             }
         }
     }
@@ -210,11 +220,11 @@ public class CTInboxListViewFragment extends Fragment {
         }
     }
 
-    void didClick(Bundle data, int position, HashMap<String, String> keyValuePayload, boolean isInboxMessageBodyClick) {
+    void didClick(Bundle data, int position, int contentPageIndex, HashMap<String, String> keyValuePayload, int buttonIndex) {
         CTInboxListViewFragment.InboxListener listener = getListener();
         if (listener != null) {
             //noinspection ConstantConditions
-            listener.messageDidClick(getActivity().getBaseContext(), inboxMessages.get(position), data, keyValuePayload, isInboxMessageBodyClick);
+            listener.messageDidClick(getActivity().getBaseContext(), contentPageIndex, inboxMessages.get(position), data, keyValuePayload, buttonIndex);
         }
     }
 
@@ -265,8 +275,33 @@ public class CTInboxListViewFragment extends Fragment {
         this.mediaRecyclerView = mediaRecyclerView;
     }
 
-    void handleClick(int position, String buttonText, JSONObject jsonObject, HashMap<String, String> keyValuePayload, boolean isInboxMessageBodyClick) {
+    void handleClick(int position, int viewPagerPosition, String buttonText, JSONObject jsonObject, HashMap<String, String> keyValuePayload, int buttonIndex) {
+        boolean isInboxMessageButtonClick = jsonObject != null;
+
         try {
+            if (isInboxMessageButtonClick) {
+                String linkType = inboxMessages.get(position).getInboxMessageContents().
+                        get(0).getLinktype(jsonObject);
+                if (linkType.equalsIgnoreCase(Constants.KEY_URL)) {
+                    String actionUrl = inboxMessages.get(position).getInboxMessageContents().get(0)
+                            .getLinkUrl(jsonObject);
+                    if (actionUrl != null) {
+                        fireUrlThroughIntent(actionUrl);
+                    }
+                }
+                else if (linkType.contains(Constants.KEY_REQUEST_FOR_NOTIFICATION_PERMISSION)
+                        && didClickForHardPermissionListener != null) {
+                    boolean isFallbackSettings = inboxMessages.get(position).
+                            getInboxMessageContents().get(0).isFallbackSettingsEnabled(jsonObject);
+                    didClickForHardPermissionListener.didClickForHardPermissionWithFallbackSettings(isFallbackSettings);
+                }
+            } else {
+                String actionUrl = inboxMessages.get(position).getInboxMessageContents().get(0).getActionUrl();
+                if (actionUrl != null) {
+                    fireUrlThroughIntent(actionUrl);
+                }
+            }
+
             Bundle data = new Bundle();
             JSONObject wzrkParams = inboxMessages.get(position).getWzrkParams();
             Iterator<String> iterator = wzrkParams.keys();
@@ -280,32 +315,13 @@ public class CTInboxListViewFragment extends Fragment {
             if (buttonText != null && !buttonText.isEmpty()) {
                 data.putString("wzrk_c2a", buttonText);
             }
-            didClick(data, position, keyValuePayload,isInboxMessageBodyClick);
-            boolean isKVButton = keyValuePayload != null && !keyValuePayload.isEmpty();
-            if (jsonObject != null) {
-                if (isKVButton || inboxMessages.get(position).getInboxMessageContents().get(0).getLinktype(jsonObject)
-                        .equalsIgnoreCase(Constants.COPY_TYPE)) {
-                    //noinspection UnnecessaryReturnStatement
-                    return;
-                } else {
-                    String actionUrl = inboxMessages.get(position).getInboxMessageContents().get(0)
-                            .getLinkUrl(jsonObject);
-                    if (actionUrl != null) {
-                        fireUrlThroughIntent(actionUrl);
-                    }
-                }
-            } else {
-                String actionUrl = inboxMessages.get(position).getInboxMessageContents().get(0).getActionUrl();
-                if (actionUrl != null) {
-                    fireUrlThroughIntent(actionUrl);
-                }
-            }
+            didClick(data, position, viewPagerPosition, keyValuePayload, buttonIndex);
         } catch (Throwable t) {
             Logger.d("Error handling notification button click: " + t.getCause());
         }
     }
 
-    void handleViewPagerClick(int position, int viewPagerPosition,boolean isInboxMessageBodyClick) {
+    void handleViewPagerClick(int position, int viewPagerPosition) {
         try {
             Bundle data = new Bundle();
             JSONObject wzrkParams = inboxMessages.get(position).getWzrkParams();
@@ -316,7 +332,8 @@ public class CTInboxListViewFragment extends Fragment {
                     data.putString(keyName, wzrkParams.getString(keyName));
                 }
             }
-            didClick(data, position, null,isInboxMessageBodyClick);
+            //pass APP_INBOX_ITEM_INDEX as value of buttonIndex to indicate the item click not the button.
+            didClick(data, position, viewPagerPosition,null, APP_INBOX_ITEM_INDEX);
             String actionUrl = inboxMessages.get(position).getInboxMessageContents().get(viewPagerPosition)
                     .getActionUrl();
             fireUrlThroughIntent(actionUrl);

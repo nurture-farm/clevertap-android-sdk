@@ -3,12 +3,11 @@ package com.clevertap.android.sdk;
 import androidx.annotation.NonNull;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.StringDef;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Locale;
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public interface Constants {
@@ -34,6 +33,8 @@ public interface Constants {
     String LABEL_NOTIFICATION_ICON = "CLEVERTAP_NOTIFICATION_ICON";
     String LABEL_INAPP_EXCLUDE = "CLEVERTAP_INAPP_EXCLUDE";
     String LABEL_REGION = "CLEVERTAP_REGION";
+    String LABEL_PROXY_DOMAIN = "CLEVERTAP_PROXY_DOMAIN";
+    String LABEL_SPIKY_PROXY_DOMAIN = "CLEVERTAP_SPIKY_PROXY_DOMAIN";
     String LABEL_DISABLE_APP_LAUNCH = "CLEVERTAP_DISABLE_APP_LAUNCHED";
     String LABEL_SSL_PINNING = "CLEVERTAP_SSL_PINNING";
     String LABEL_BACKGROUND_SYNC = "CLEVERTAP_BACKGROUND_SYNC";
@@ -46,13 +47,16 @@ public interface Constants {
     String LABEL_INTENT_SERVICE = "CLEVERTAP_INTENT_SERVICE";
     String LABEL_XIAOMI_APP_KEY = "CLEVERTAP_XIAOMI_APP_KEY";
     String LABEL_XIAOMI_APP_ID = "CLEVERTAP_XIAOMI_APP_ID";
+    String LABEL_ENCRYPTION_LEVEL = "CLEVERTAP_ENCRYPTION_LEVEL";
+    String LABEL_DEFAULT_CHANNEL_ID = "CLEVERTAP_DEFAULT_CHANNEL_ID";
+    String FCM_FALLBACK_NOTIFICATION_CHANNEL_ID = "fcm_fallback_notification_channel";
+    String FCM_FALLBACK_NOTIFICATION_CHANNEL_NAME = "Misc";
     String CLEVERTAP_OPTOUT = "ct_optout";
     String CLEVERTAP_STORAGE_TAG = "WizRocket";
     String CLEVERTAP_LOG_TAG = "CleverTap";
     int SESSION_LENGTH_MINS = 20;
     String DEVICE_ID_TAG = "deviceId";
     String FALLBACK_ID_TAG = "fallbackId";
-    SimpleDateFormat FB_DOB_DATE_FORMAT = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
     int PAGE_EVENT = 1;
     int PING_EVENT = 2;
     int PROFILE_EVENT = 3;
@@ -60,6 +64,8 @@ public interface Constants {
     int DATA_EVENT = 5;
     int NV_EVENT = 6;
     int FETCH_EVENT = 7;
+    int DEFINE_VARS_EVENT = 8;
+    String variablePayloadType = "varsPayload";
     String WZRK_FETCH = "wzrk_fetch";
     String ICON_BASE_URL = "http://static.wizrocket.com/android/ico/";
     String NOTIFICATION_CLICKED_EVENT_NAME = "Notification Clicked";
@@ -67,6 +73,7 @@ public interface Constants {
     String SC_OUTGOING_EVENT_NAME = "SCOutgoing";
     String SC_INCOMING_EVENT_NAME = "SCIncoming";
     String SC_END_EVENT_NAME = "SCEnd";
+    String SC_CAMPAIGN_OPT_OUT_EVENT_NAME = "SCCampaignOptOut";
     String GEOFENCE_ENTERED_EVENT_NAME = "Geocluster Entered";
     String GEOFENCE_EXITED_EVENT_NAME = "Geocluster Exited";
     String APP_LAUNCHED_EVENT = "App Launched";
@@ -93,6 +100,7 @@ public interface Constants {
     String INBOX_JSON_RESPONSE_KEY = "inbox_notifs";
     String DISPLAY_UNIT_JSON_RESPONSE_KEY = "adUnit_notifs";
     String FEATURE_FLAG_JSON_RESPONSE_KEY = "ff_notifs";
+    String REQUEST_VARIABLES_JSON_RESPONSE_KEY = "vars";
     String REMOTE_CONFIG_FLAG_JSON_RESPONSE_KEY = "pc_notifs";
     String GEOFENCES_JSON_RESPONSE_KEY = "geofences";
     String DISCARDED_EVENT_JSON_KEY = "d_e";
@@ -117,7 +125,7 @@ public interface Constants {
     String WZRK_ACCT_ID_KEY = "wzrk_acct_id";
     String WZRK_FROM = "CTPushNotificationReceiver";
     String NETWORK_INFO = "NetworkInfo";
-    String PRIMARY_DOMAIN = "wzrkt.com";
+    String PRIMARY_DOMAIN = "clevertap-prod.com";
     String KEY_DOMAIN_NAME = "comms_dmn";
     String SPIKY_KEY_DOMAIN_NAME = "comms_dmn_spiky";
     String HEADER_DOMAIN_NAME = "X-WZRK-RD";
@@ -129,6 +137,7 @@ public interface Constants {
     String KEY_I = "comms_i";
     String KEY_J = "comms_j";
     String CACHED_GUIDS_KEY = "cachedGUIDsKey";
+    String CACHED_VARIABLES_KEY = "variablesKey";
     String MULTI_USER_PREFIX = "mt_";
     String NOTIFICATION_TAG = "wzrk_pn";
     String CHARGED_EVENT = "Charged";
@@ -158,6 +167,8 @@ public interface Constants {
     String KEY_ACCOUNT_ID = "accountId";
     String KEY_ACCOUNT_TOKEN = "accountToken";
     String KEY_ACCOUNT_REGION = "accountRegion";
+    String KEY_PROXY_DOMAIN = "proxyDomain";
+    String KEY_SPIKY_PROXY_DOMAIN = "spikyProxyDomain";
     String KEY_ANALYTICS_ONLY = "analyticsOnly";
     String KEY_DEFAULT_INSTANCE = "isDefaultInstance";
     String KEY_USE_GOOGLE_AD_ID = "useGoogleAdId";
@@ -175,10 +186,15 @@ public interface Constants {
     String KEY_TDC = "tdc";
     String KEY_KV = "kv";
     String KEY_TYPE = "type";
+    String KEY_FALLBACK_NOTIFICATION_SETTINGS = "fbSettings";
+    String KEY_REQUEST_FOR_NOTIFICATION_PERMISSION = "rfp";
+    int NOTIFICATION_PERMISSION_REQUEST_CODE = 102;
     String KEY_IS_TABLET = "tablet";
     String KEY_BG = "bg";
     String KEY_TITLE = "title";
     String KEY_TEXT = "text";
+    String KEY_KEY = "key";
+    String KEY_VALUE = "value";
     String KEY_COLOR = "color";
     String KEY_MESSAGE = "message";
     String KEY_HIDE_CLOSE = "close";
@@ -195,6 +211,8 @@ public interface Constants {
     String KEY_PACKAGE_NAME = "packageName";
     String KEY_ALLOWED_PUSH_TYPES = "allowedPushTypes";
     String KEY_IDENTITY_TYPES = "identityTypes";
+    String KEY_ENCRYPTION_LEVEL = "encryptionLevel";
+    String KEY_ENCRYPTION_FLAG_STATUS = "encryptionFlagStatus";
     String WZRK_PUSH_ID = "wzrk_pid";
     String WZRK_PUSH_SILENT = "wzrk_pn_s";
     String EXTRAS_FROM = "extras_from";
@@ -219,6 +237,8 @@ public interface Constants {
     String BLACK = "#000000";
     String WHITE = "#FFFFFF";
     String BLUE = "#0000FF";
+    String GREEN = "#00FF00";
+    String LIGHT_BLUE = "#818ce5";
     /**
      * Profile command constants.
      */
@@ -251,12 +271,23 @@ public interface Constants {
     String KEY_HAS_URL = "hasUrl";
     String KEY_HAS_LINKS = "hasLinks";
     String KEY_LINKS = "links";
+    String KEY_ENCRYPTION_MIGRATION = "encryptionmigration";
+    String KEY_ENCRYPTION_CGK = "cgk";
+    String KEY_ENCRYPTION_NAME = "Name";
+    String KEY_ENCRYPTION_IDENTITY = "Identity";
+    String KEY_ENCRYPTION_PHONE = "Phone";
+    String KEY_ENCRYPTION_EMAIL = "Email";
     String TEST_IDENTIFIER = "0_0";
     String FEATURE_DISPLAY_UNIT = "DisplayUnit : ";
     String FEATURE_FLAG_UNIT = "Feature Flag : ";
     String LOG_TAG_PRODUCT_CONFIG = "Product Config : ";
+
+    String CRYPTION_SALT = "W1ZRCl3>";
+    String CRYPTION_IV = "__CL3>3Rt#P__1V_";
+
     int FETCH_TYPE_PC = 0;
     int FETCH_TYPE_FF = 1;
+    int FETCH_TYPE_VARIABLES = 4;
     String LOG_TAG_SIGNED_CALL = "SignedCall : ";
     String LOG_TAG_GEOFENCES = "Geofences : ";
     // error message codes
@@ -284,6 +315,11 @@ public interface Constants {
     int INVALID_MULTI_VALUE_KEY = 23;
     int RESTRICTED_MULTI_VALUE_KEY = 24;
     int INVALID_INCREMENT_DECREMENT_VALUE = 25;
+    int ENCRYPTION_FLAG_FAIL = 0b00;
+    int ENCRYPTION_FLAG_CGK_SUCCESS = 0b01;
+    int ENCRYPTION_FLAG_DB_SUCCESS = 0b10;
+    int ENCRYPTION_FLAG_ALL_SUCCESS = 0b11;
+
     String CLEVERTAP_IDENTIFIER = "CLEVERTAP_IDENTIFIER";
     String SEPARATOR_COMMA = ",";
     String EMPTY_STRING = "";
@@ -293,8 +329,21 @@ public interface Constants {
     // valid profile identifier keys
     HashSet<String> LEGACY_IDENTITY_KEYS = new HashSet<>(Arrays.asList(TYPE_IDENTITY, TYPE_EMAIL));
     HashSet<String> ALL_IDENTITY_KEYS = new HashSet<>(Arrays.asList(TYPE_IDENTITY, TYPE_EMAIL, TYPE_PHONE));
+    HashSet<String> MEDIUM_CRYPT_KEYS = new HashSet<>(Arrays.asList(KEY_ENCRYPTION_CGK, KEY_ENCRYPTION_MIGRATION, KEY_ENCRYPTION_EMAIL, KEY_ENCRYPTION_PHONE, KEY_ENCRYPTION_IDENTITY, KEY_ENCRYPTION_NAME));
+    HashSet<String> NONE_CRYPT_KEYS = new HashSet<>(Arrays.asList(KEY_ENCRYPTION_MIGRATION));
+    HashSet<String> piiDBKeys = new HashSet<>(Arrays.asList(KEY_ENCRYPTION_NAME, KEY_ENCRYPTION_EMAIL, KEY_ENCRYPTION_IDENTITY, KEY_ENCRYPTION_PHONE));
+
 
     int MAX_DELAY_FREQUENCY = 1000 * 60 * 10;
+
+    /**
+     * Valid indexes for the App Inbox item and buttons.
+     */
+    int APP_INBOX_ITEM_CONTENT_PAGE_INDEX = 0; //used for non-carousel templates as they have only one page of content to display
+    int APP_INBOX_ITEM_INDEX = -1;
+    int APP_INBOX_CTA1_INDEX = 0;
+    int APP_INBOX_CTA2_INDEX = 1;
+    int APP_INBOX_CTA3_INDEX = 2;
 
     String[] NULL_STRING_ARRAY = new String[0];
     String PT_NOTIF_ID = "notificationId";
@@ -303,17 +352,29 @@ public interface Constants {
     String PT_INPUT_KEY = "pt_input_reply";
 
     // ==========Fallback keys=========
-    String NOTIFICATION_HEALTH = "wzrk_pn_h";
     String WZRK_TSR_FB = "wzrk_tsr_fb";// terminate and stay resident
     String NOTIFICATION_RENDER_FALLBACK = "wzrk_fallback";
-
-    /**
-     * Device app bucket when notification is rendered
-     */
-    String WZRK_HEALTH_STATE_GOOD = "true";
-    String WZRK_HEALTH_STATE_BAD = "false";
+    String OMR_INVOKE_TIME_IN_MILLIS = "omr_invoke_time_in_millis";
+    String WZRK_BPDS = "wzrk_bpds";
+    String WZRK_PN_PRT = "wzrk_pn_prt";
+    String PRIORITY_NORMAL = "normal";
+    String PRIORITY_UNKNOWN = "fcm_unknown";
+    String D_SRC = "d_src";// data source for push impressions
+    String D_SRC_PI_R = "PI_R";// push impression data source is Receiver
+    String D_SRC_PI_WM = "PI_WM";// push impression data source is work manager
 
     String REGION_INDIA = "in1";
     String REGION_EUROPE = "eu1";
+
+    // ============ notification image download timeout ===================
+
+    int PN_IMAGE_CONNECTION_TIMEOUT_IN_MILLIS =  1000;
+    int PN_IMAGE_READ_TIMEOUT_IN_MILLIS =  5000;
+    long PN_IMAGE_DOWNLOAD_TIMEOUT_IN_MILLIS =  5000;
+    long PN_LARGE_ICON_DOWNLOAD_TIMEOUT_IN_MILLIS =  2000;
+
+    //==============
+
+   String FLUSH_PUSH_IMPRESSIONS_ONE_TIME_WORKER_NAME = "CTFlushPushImpressionsOneTime";
 
 }

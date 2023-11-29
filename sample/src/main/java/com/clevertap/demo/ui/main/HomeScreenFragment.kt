@@ -57,9 +57,7 @@ class HomeScreenFragment : Fragment() {
         listItemBinding = HomeScreenFragmentBinding.inflate(layoutInflater, container, false).apply {
             viewmodel = viewModel
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            listItemBinding.expandableListView.isNestedScrollingEnabled = true
-        }
+        listItemBinding.expandableListView.isNestedScrollingEnabled = true
 
         return listItemBinding.root
     }
@@ -72,8 +70,8 @@ class HomeScreenFragment : Fragment() {
 
         viewModel.clickCommand.observe(viewLifecycleOwner, Observer<String> { commandPosition ->
             when (commandPosition) {
-                "60" -> startActivity(Intent(activity, WebViewActivity::class.java))
-                "70" -> { // init Geofence API
+                "6-0" -> startActivity(Intent(activity, WebViewActivity::class.java))
+                "7-0" -> { // init Geofence API
                     when {
                         // proceed only if cleverTap instance is not null
                         cleverTapInstance == null -> println("cleverTapInstance is null")
@@ -81,7 +79,7 @@ class HomeScreenFragment : Fragment() {
                         else -> initCTGeofenceApi(cleverTapInstance)
                     }
                 }
-                "71" -> { // trigger location
+                "7-1" -> { // trigger location
                     try {
                         CTGeofenceAPI.getInstance(context).triggerLocation()
                     } catch (e: IllegalStateException) {
@@ -91,7 +89,7 @@ class HomeScreenFragment : Fragment() {
                         initCTGeofenceApi(cleverTapInstance!!)
                     }
                 }
-                "72" -> CTGeofenceAPI.getInstance(context).deactivate() // deactivate geofence
+                "7-2" -> CTGeofenceAPI.getInstance(context).deactivate() // deactivate geofence
             }
         })
     }
