@@ -26,10 +26,10 @@ android {
 }
 
 dependencies {
-    compileOnly project(':clevertap-core')
+    implementation project(':clevertap-core')
     implementation Libs.core_ktx
     implementation Libs.appcompat
-    compileOnly Libs.material
+    implementation Libs.material
 
 
     testImplementation Libs.junit_junit

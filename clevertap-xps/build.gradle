@@ -23,10 +23,10 @@ android{
 }
 
 dependencies {
-    compileOnly fileTree(include: ["*.jar", "*.aar"], dir: "libs")
+    implementation fileTree(include: ["*.jar", "*.aar"], dir: "libs")
 
-    compileOnly project(':clevertap-core')
-    compileOnly Libs.androidx_annotation
+    implementation project(':clevertap-core')
+    implementation Libs.androidx_annotation
     testImplementation project(':test_shared')
     testImplementation fileTree('libs')
 }

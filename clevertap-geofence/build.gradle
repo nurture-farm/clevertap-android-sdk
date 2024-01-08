@@ -15,10 +15,10 @@ ext {
 apply from: "../gradle-scripts/commons.gradle"
 
 dependencies {
-    compileOnly project(':clevertap-core')
-    compileOnly Libs.play_services_location
-    compileOnly Libs.work_runtime
-    compileOnly Libs.concurrent_futures
+    implementation project(':clevertap-core')
+    implementation Libs.play_services_location
+    implementation Libs.work_runtime
+    implementation Libs.concurrent_futures
 
     // Unit testing dependencies
     testImplementation Libs.junit_platform_runner

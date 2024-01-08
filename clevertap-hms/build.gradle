@@ -18,9 +18,9 @@ ext {
 apply from: "../gradle-scripts/commons.gradle"
 
 dependencies {
-    compileOnly project(':clevertap-core')
+    implementation project(':clevertap-core')
     implementation Libs.push
-    compileOnly Libs.androidx_annotation
+    implementation Libs.androidx_annotation
 
     testImplementation project(':test_shared')
     testImplementation Libs.push
