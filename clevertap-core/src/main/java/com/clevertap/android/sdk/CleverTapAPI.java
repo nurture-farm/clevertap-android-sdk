@@ -158,17 +158,6 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     private WeakReference<InboxMessageListener> inboxMessageListener;
 
     /**
-     * This method is used to change the credentials of CleverTap account Id and token programmatically
-     *
-     * @param accountID CleverTap Account Id
-     * @param token     CleverTap Account Token
-     */
-    @SuppressWarnings("unused")
-    public static void changeCredentials(String accountID, String token) {
-        changeCredentials(accountID, token, null);
-    }
-
-    /**
      * This method is used to change the credentials of CleverTap account Id, token and region programmatically
      * Once the SDK is initialized with a default instance, subsequent calls to this method will be ignored.
      *
@@ -177,7 +166,7 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
      * @param region    Clever Tap Account Region
      */
     @SuppressWarnings({"unused", "WeakerAccess"})
-    public static void changeCredentials(String accountID, String token, String region) {
+    public static void changeCredentials(String accountID, String token, String region, String proxy) {
         if (defaultConfig != null) {
             Logger.i("CleverTap SDK already initialized with accountID:" + defaultConfig.getAccountId()
                     + " and token:" + defaultConfig.getAccountToken() + ". Cannot change credentials to "
@@ -185,7 +174,7 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
             return;
         }
 
-        ManifestInfo.changeCredentials(accountID, token, region);
+        ManifestInfo.changeCredentials(accountID, token, region, proxy);
     }
 
     /**
@@ -194,19 +183,17 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
      * @param accountID         CleverTap Account Id
      * @param token             CleverTap Account Token
      * @param proxyDomain       CleverTap Proxy Domain
-     * @param spikyProxyDomain  CleverTap Spiky Proxy Domain
      */
-    public static void changeCredentials(String accountID, String token, String proxyDomain, String spikyProxyDomain) {
+    public static void changeCredentials(String accountID, String token, String proxyDomain) {
         if (defaultConfig != null) {
             Logger.i("CleverTap SDK already initialized with accountID:" + defaultConfig.getAccountId()
                     + ", token:" + defaultConfig.getAccountToken() + ", proxyDomain: " + defaultConfig.getProxyDomain() +
-                    " and spikyDomain: " + defaultConfig.getSpikyProxyDomain() +
                     ". Cannot change credentials to accountID: " + accountID +
-                    ", token: " + token + ", proxyDomain: " + proxyDomain + "and spikyProxyDomain: " + spikyProxyDomain);
+                    ", token: " + token + ", proxyDomain: " + proxyDomain);
             return;
         }
 
-        ManifestInfo.changeCredentials(accountID, token, proxyDomain, spikyProxyDomain);
+        ManifestInfo.changeCredentials(accountID, token, defaultConfig.getAccountRegion(), proxyDomain);
     }
 
     /**
@@ -3003,7 +2990,6 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         String accountToken = manifest.getAcountToken();
         String accountRegion = manifest.getAccountRegion();
         String proxyDomain = manifest.getProxyDomain();
-        String spikyProxyDomain = manifest.getSpikeyProxyDomain();
         if (accountId == null || accountToken == null) {
             Logger.i(
                     "Account ID or Account token is missing from AndroidManifest.xml, unable to create default instance");
@@ -3012,13 +2998,10 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         if (accountRegion == null) {
             Logger.i("Account Region not specified in the AndroidManifest - using default region");
         }
-        CleverTapInstanceConfig defaultInstanceConfig = CleverTapInstanceConfig.createDefaultInstance(context, accountId, accountToken, accountRegion);
+        CleverTapInstanceConfig defaultInstanceConfig = CleverTapInstanceConfig.createDefaultInstance(context, accountId, accountToken, accountRegion, proxyDomain);
 
         if (proxyDomain != null && proxyDomain.trim().length() > 0) {
             defaultInstanceConfig.setProxyDomain(proxyDomain);
-        }
-        if (spikyProxyDomain != null && spikyProxyDomain.trim().length() > 0) {
-            defaultInstanceConfig.setSpikyProxyDomain(spikyProxyDomain);
         }
         return defaultInstanceConfig;
     }

@@ -28,6 +28,8 @@ import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.annotation.WorkerThread;
+import androidx.core.app.NotificationManagerCompat;
+
 import com.clevertap.android.sdk.login.LoginInfoProvider;
 import com.clevertap.android.sdk.task.CTExecutorFactory;
 import com.clevertap.android.sdk.task.OnSuccessListener;
@@ -93,6 +95,8 @@ public class DeviceInfo {
 
         private final String locale;
 
+        private boolean notificationsEnabled;
+
         DeviceCachedInfo() {
             versionName = getVersionName();
             osName = getOsName();
@@ -110,6 +114,7 @@ public class DeviceInfo {
             width = getWidth();
             widthPixels = getWidthPixels();
             dpi = getDPI();
+            notificationsEnabled = getNotificationEnabledForUser();
             localInAppCount = getLocalInAppCountFromPreference();
             locale = getDeviceLocale();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -279,6 +284,10 @@ public class DeviceInfo {
         @SuppressLint("MissingPermission")
         private String getNetworkType() {
             return Utils.getDeviceNetworkType(context);
+        }
+
+        private boolean getNotificationEnabledForUser() {
+            return NotificationManagerCompat.from(context).areNotificationsEnabled();
         }
 
         private String getOsName() {
@@ -638,6 +647,10 @@ public class DeviceInfo {
 
     public String getNetworkType() {
         return getDeviceCachedInfo().networkType;
+    }
+
+    boolean getNotificationsEnabledForUser() {
+        return getDeviceCachedInfo().notificationsEnabled;
     }
 
     public String getOsName() {

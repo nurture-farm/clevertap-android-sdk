@@ -18,8 +18,6 @@ public class ManifestInfo {
 
     private static String proxyDomain;
 
-    private static String spikyProxyDomain;
-
     private static boolean useADID;
 
     private static boolean appLaunchedDisabled;
@@ -91,10 +89,6 @@ public class ManifestInfo {
         if (proxyDomain == null) {
             proxyDomain = _getManifestStringValueForKey(metaData, Constants.LABEL_PROXY_DOMAIN);
         }
-        if (spikyProxyDomain == null) {
-            spikyProxyDomain = _getManifestStringValueForKey(metaData, Constants.LABEL_SPIKY_PROXY_DOMAIN);
-        }
-        eventPortalDomain = _getManifestStringValueForKey(metaData, Constants.LABEL_EVENT_PORTAL_DOMAIN);
         userType = _getManifestStringValueForKey(metaData, Constants.LABEL_USER_TYPE);
         notificationIcon = _getManifestStringValueForKey(metaData, Constants.LABEL_NOTIFICATION_ICON);
         useADID = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_USE_GOOGLE_AD_ID));
@@ -207,12 +201,6 @@ public class ManifestInfo {
         return proxyDomain;
     }
 
-    @RestrictTo(RestrictTo.Scope.LIBRARY)
-    public String getSpikeyProxyDomain() {
-        Logger.v("ManifestInfo: getSpikeyProxyDomain called, returning spikeyProxyDomain:" + spikyProxyDomain);
-        return spikyProxyDomain;
-    }
-
     String getPackageName() {
         return packageName;
     }
@@ -249,17 +237,11 @@ public class ManifestInfo {
                 : Constants.NULL_STRING_ARRAY;
     }
 
-    static void changeCredentials(String id, String token, String region) {
+    static void changeCredentials(String id, String token, String region, String proxy) {
         accountId = id;
         accountToken = token;
         accountRegion = region;
-    }
-
-    static void changeCredentials(String id, String token, String _proxyDomain, String _spikyProxyDomain) {
-        accountId = id;
-        accountToken = token;
-        proxyDomain = _proxyDomain;
-        spikyProxyDomain = _spikyProxyDomain;
+        proxyDomain = proxy;
     }
 
     static void changeXiaomiCredentials(String xiaomiAppID, String xiaomiAppKey) {

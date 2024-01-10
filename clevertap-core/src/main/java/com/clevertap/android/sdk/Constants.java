@@ -8,6 +8,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Set;
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public interface Constants {
@@ -34,7 +35,6 @@ public interface Constants {
     String LABEL_INAPP_EXCLUDE = "CLEVERTAP_INAPP_EXCLUDE";
     String LABEL_REGION = "CLEVERTAP_REGION";
     String LABEL_PROXY_DOMAIN = "CLEVERTAP_PROXY_DOMAIN";
-    String LABEL_SPIKY_PROXY_DOMAIN = "CLEVERTAP_SPIKY_PROXY_DOMAIN";
     String LABEL_DISABLE_APP_LAUNCH = "CLEVERTAP_DISABLE_APP_LAUNCHED";
     String LABEL_SSL_PINNING = "CLEVERTAP_SSL_PINNING";
     String LABEL_BACKGROUND_SYNC = "CLEVERTAP_BACKGROUND_SYNC";
@@ -168,7 +168,6 @@ public interface Constants {
     String KEY_ACCOUNT_TOKEN = "accountToken";
     String KEY_ACCOUNT_REGION = "accountRegion";
     String KEY_PROXY_DOMAIN = "proxyDomain";
-    String KEY_SPIKY_PROXY_DOMAIN = "spikyProxyDomain";
     String KEY_ANALYTICS_ONLY = "analyticsOnly";
     String KEY_DEFAULT_INSTANCE = "isDefaultInstance";
     String KEY_USE_GOOGLE_AD_ID = "useGoogleAdId";
@@ -251,6 +250,13 @@ public interface Constants {
     String GUID_PREFIX_GOOGLE_AD_ID = "__g";
     String CUSTOM_CLEVERTAP_ID_PREFIX = "__h";
     String ERROR_PROFILE_PREFIX = "__i";
+    // valid profile identifier keys
+    Set<String> PROFILE_IDENTIFIER_KEYS = new HashSet<>(Arrays.asList(
+            "Identity", "Email", "FBID", "GPID"));
+    String KEY_IDENTIFIER = "Identity";
+    String KEY_USER_TYPE = "userType";
+    String KEY_USER_ID = "userId";
+    String KEY_DEVICE_ID = "deviceId";
     String KEY_ICON = "icon";
     String KEY_POSTER_URL = "poster";
     String KEY_ACTION = "action";

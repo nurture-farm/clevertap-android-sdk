@@ -12,3 +12,8 @@ sample/google-services.json
 ct_signing_key.gpg
 /sample/release/sample-release.aab
 /sample/libs/
+
+AndroidStarter/keys.txt
+github.properties
+docs
+
