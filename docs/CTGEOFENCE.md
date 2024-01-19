@@ -1,21 +1,6 @@
 <p align="center">
-  <img src="https://github.com/CleverTap/clevertap-android-sdk/blob/master/static/clevertap-logo.png" width="300"/>
+  <img src="https://github.com/CleverTap/clevertap-ios-sdk/blob/master/docs/images/clevertap-logo.png" height="220"/>
 </p>
-
-## ⍗ Table of contents
-
-* [Introduction](#-introduction)
-* [Installation](#-installation)
-* [Permissions](#-permissions)
-* [Initialization](#-initialization)
-* [Settings parameters](#-settings-parameters)
-* [Trigger Location](#-trigger-location)
-* [Callbacks/Listeners](#-callbackslisteners)
-* [Deactivation](#%EF%B8%8F-deactivation)
-* [ProGuard](#-proguard)
-* [Example Usage](#-example-usage)
-* [FAQ](#-faq)
-* [Questions](#-questions)
 
 ## 👋 Introduction
 [(Back to top)](#-table-of-contents)
@@ -31,11 +16,11 @@ CleverTap Android Geofence SDK provides **Geofencing capabilities** to CleverTap
 Add the following dependencies to the `build.gradle`
 
 ```Groovy
-implementation "com.clevertap.android:clevertap-geofence-sdk:1.0.1"
-implementation "com.clevertap.android:clevertap-android-sdk:4.0.0" // 3.9.0 and above
-implementation "com.google.android.gms:play-services-location:17.0.0"
-implementation "androidx.work:work-runtime:2.3.4" // required for FETCH_LAST_LOCATION_PERIODIC
-implementation "androidx.concurrent:concurrent-futures:1.0.0" // required for FETCH_LAST_LOCATION_PERIODIC
+implementation "com.clevertap.android:clevertap-geofence-sdk:1.2.0"
+implementation "com.clevertap.android:clevertap-android-sdk:5.2.1" // 3.9.0 and above
+implementation "com.google.android.gms:play-services-location:21.0.0"
+implementation "androidx.work:work-runtime:2.7.1" // required for FETCH_LAST_LOCATION_PERIODIC
+implementation "androidx.concurrent:concurrent-futures:1.1.0" // required for FETCH_LAST_LOCATION_PERIODIC
 ```
 ## 🔒 Permissions
 [(Back to top)](#-table-of-contents)
@@ -43,12 +28,14 @@ implementation "androidx.concurrent:concurrent-futures:1.0.0" // required for FE
 In order to start using geofence in your app, the app will need below permissions in `AndroidManifest.xml` which is already added by SDK so you don’t have to add anything in manifest.
 ```XML
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 <uses-permission android:name="android.permission.WAKE_LOCK" />
 <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 ```
 Before SDK initialization App will need to prompt users to grant below permissions at runtime. Since users can revoke permissions at any time from the app Settings screen, your app needs to check that it has the permissions it needs every time it runs.
 See [Permissions](https://developer.android.com/preview/features/runtime-permissions.html) and [Location Permissions](https://developer.android.com/training/location/permissions#request-location-access-runtime) for more details.
+Also if your app targets Android 12 or higher then you must also request the ACCESS_COARSE_LOCATION with ACCESS_FINE_LOCATION permission. You must include both permissions in a single runtime request.See [Android 12 location Permissions changes](https://developer.android.com/about/versions/12/behavior-changes-12#approximate-location) for more details.
 
 ```XML
 android.permission.ACCESS_FINE_LOCATION
@@ -76,6 +63,7 @@ CTGeofenceSettings ctGeofenceSettings = new CTGeofenceSettings.Builder()
                 .setInterval(interval)//long value for interval in milliseconds
                 .setFastestInterval(fastestInterval)//long value for fastest interval in milliseconds
                 .setSmallestDisplacement(displacement)//float value for smallest Displacement in meters
+                .setGeofenceNotificationResponsiveness(geofenceNotificationResponsiveness)// int value for geofence notification responsiveness in milliseconds
                 .build();
  ```
 **Note** - 

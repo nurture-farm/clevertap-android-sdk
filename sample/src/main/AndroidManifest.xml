@@ -5,9 +5,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!--Enable below line to test for Android GO devices-->
+    <!--<uses-feature android:name="android.hardware.ram.low" android:required="true"/>-->
+
     <application
         android:name=".MyApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -15,11 +18,29 @@
         android:theme="@style/AppTheme">
         <activity
             android:name=".HomeScreenActivity"
+            android:exported="true"
             android:theme="@style/AppTheme.NoActionBar">
+
+            <!-- This intent filter handles app launch -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- This intent filter used for handling deep link -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- If a user clicks on a shared link that uses the "http" scheme, your
+                     app should be able to delegate that traffic to "https". -->
+                <data
+                    android:host="${applicationId}"
+                    android:pathPrefix="/HomeScreenActivity"
+                    android:scheme="ctdemo" />
             </intent-filter>
         </activity>
 
@@ -30,10 +51,19 @@
         <!-- Add meta data for CleverTap Account Id and Account Token -->
         <meta-data
             android:name="CLEVERTAP_ACCOUNT_ID"
-            android:value="TEST-46W-WWR-R85Z" />
+            android:value="YOUR ACCT ID" />
         <meta-data
             android:name="CLEVERTAP_TOKEN"
-            android:value="TEST-200-064" />
+            android:value="YOUR ACCT TOKEN" />
+        <meta-data
+            android:name="CLEVERTAP_REGION"
+            android:value="eu1"/>
+        <!--<meta-data
+            android:name="CLEVERTAP_PROXY_DOMAIN"
+            android:value="analytics.sdktesting.xyz"/>-->
+        <!--<meta-data
+            android:name="CLEVERTAP_SPIKY_PROXY_DOMAIN"
+            android:value="push.sdktesting.xyz"/>-->
 
         <!-- Xiaomi Push -->
         <meta-data
@@ -47,15 +77,15 @@
         <!-- android:name="CLEVERTAP_REGION" -->
         <!-- android:value="eu1"/> -->
         <!-- IMPORTANT: To force use Google AD ID to uniquely identify  users, use the following meta tag. GDPR mandates that if you are using this tag, there is prominent disclousure to your end customer in their application. Read more about GDPR here - https://clevertap.com/blog/in-preparation-of-gdpr-compliance/ -->
-        <meta-data
+        <!--<meta-data
             android:name="CLEVERTAP_USE_GOOGLE_AD_ID"
-            android:value="1" />
+            android:value="1" />-->
         <meta-data
             android:name="CLEVERTAP_SSL_PINNING"
             android:value="0" /> <!-- Add meta data for CleverTap Notification Icon -->
         <meta-data
             android:name="CLEVERTAP_NOTIFICATION_ICON"
-            android:value="ic_launcher_round" />
+            android:value="ic_notification" />
         <meta-data
             android:name="CLEVERTAP_BACKGROUND_SYNC"
             android:value="1" /> <!-- Add meta and set to 1 to raise Notification Viewed for Push Notifications -->
@@ -65,6 +95,16 @@
         <meta-data
             android:name="CLEVERTAP_USE_CUSTOM_ID"
             android:value="0" /> <!-- Add CleverTap Push Notification Services & Install Referrer Receivers -->
+        <!-- <meta-data
+             android:name="CLEVERTAP_IDENTIFIER"
+             android:value="Email,Phone" />-->
+        <meta-data
+            android:name="CLEVERTAP_ACTIVITY_EXCLUDE"
+            android:value="HomeScreenActivity" />
+        <meta-data
+            android:name="CLEVERTAP_ENCRYPTION_LEVEL"
+            android:value="1" />
+
         <service
             android:name="com.clevertap.android.sdk.pushnotification.fcm.FcmMessageListenerService"
             android:exported="true">
@@ -72,6 +112,13 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+        <!--        <service
+                    android:name="com.clevertap.demo.MyFcmMessageListenerService"
+                    android:exported="true">
+                    <intent-filter>
+                        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+                    </intent-filter>
+                </service>-->
         <service
             android:name="com.clevertap.android.sdk.pushnotification.CTNotificationIntentService"
             android:exported="false">
@@ -79,10 +126,35 @@
                 <action android:name="com.clevertap.PUSH_EVENT" />
             </intent-filter>
         </service>
-
         <activity
             android:name=".WebViewActivity"
-            android:label="WebView" />
+            android:exported="true"
+            android:label="WebView">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- If a user clicks on a shared link that uses the "http" scheme, your
+                     app should be able to delegate that traffic to "https". -->
+                <data
+                    android:host="${applicationId}"
+                    android:pathPrefix="/WebViewActivity"
+                    android:scheme="ctdemo" />
+
+            </intent-filter>
+
+            <intent-filter
+                android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="google.com"
+                    android:scheme="https" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

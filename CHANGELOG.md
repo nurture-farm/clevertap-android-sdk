@@ -1,4 +1,181 @@
-## CHANGE LOG
+## CHANGE LOG.
+
+### October 27, 2023
+
+* [CleverTap Push Templates SDK v1.2.0](docs/CTPUSHTEMPLATESCHANGELOG.md).
+
+### October 12, 2023
+
+* [CleverTap Android SDK v5.2.1](docs/CTCORECHANGELOG.md)
+* [CleverTap Xiaomi Push SDK v1.5.4](docs/CTXIAOMIPUSHCHANGELOG.md)
+
+### August 10, 2023
+
+* [CleverTap Android SDK v5.2.0](docs/CTCORECHANGELOG.md)
+* [CleverTap Xiaomi Push SDK v1.5.3](docs/CTXIAOMIPUSHCHANGELOG.md)
+* [CleverTap Huawei Push SDK v1.3.3](docs/CTHUAWEIPUSHCHANGELOG.md)
+
+### June 28, 2023
+
+* [CleverTap Android SDK v5.1.0](docs/CTCORECHANGELOG.md)
+* [CleverTap Push Templates SDK v1.1.0](docs/CTPUSHTEMPLATESCHANGELOG.md).
+
+### May 5, 2023
+
+* [CleverTap Android SDK v5.0.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Push Templates SDK v1.0.9](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTPUSHTEMPLATESCHANGELOG.md)
+  .
+
+### March 8, 2023
+
+* [CleverTap Push Templates SDK v1.0.8](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTPUSHTEMPLATESCHANGELOG.md)
+  . CleverTap Push Templates SDK `v1.0.8`
+  requires [CleverTap Android SDK v4.7.5](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+  to work properly.
+
+### March 6, 2023
+
+* [CleverTap Android SDK v4.7.5](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap RenderMax SDK v1.0.3](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTRENDERMAXCHANGELOG.md)
+
+### January 27, 2023
+* [CleverTap Android SDK v4.7.4](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+
+### January 25, 2023
+* [CleverTap Android SDK v4.7.3](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap RenderMax SDK v1.0.2](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTRENDERMAXCHANGELOG.md)
+
+### December 16, 2022
+* [CleverTap Android SDK v4.7.2](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+
+### December 5, 2022
+* [CleverTap Android SDK v4.7.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Push Templates SDK v1.0.7](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTPUSHTEMPLATESCHANGELOG.md)
+
+### November 1, 2022
+* [CleverTap Android SDK v4.7.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Geofence SDK v1.2.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTGEOFENCECHANGELOG.md)
+* [CleverTap Xiaomi Push SDK v1.5.2](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTXIAOMIPUSHCHANGELOG.md)
+* [CleverTap Huawei Push SDK v1.3.2](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTHUAWEIPUSHCHANGELOG.md)
+* [CleverTap Push Templates SDK v1.0.6](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTPUSHTEMPLATESCHANGELOG.md)
+
+### March 31, 2023
+* [CleverTap Android SDK v4.6.9](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md#version-469-march-31-2023)
+
+### March 22, 2023
+* [CleverTap Android SDK v4.6.8](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md#version-468-march-22-2023)
+
+### March 15, 2023
+* [CleverTap Android SDK v4.6.7](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md#version-467-march-15-2023)
+* [CleverTap Push Templates SDK v1.0.5.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTPUSHTEMPLATESCHANGELOG.md#version-1051-march-15-2023). CleverTap Push Templates SDK `v1.0.5.1` requires [CleverTap Android SDK v4.6.7](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md#version-467-march-15-2023) to work properly.
+* **Note:** This release is being done for Android 12 targeted users, satisfying below points.
+  * Targeting Android 12 and
+  * Using RenderMax and/or using Push Templates
+
+### October 31, 2022
+* [CleverTap Android SDK v4.6.6](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+
+### October 21, 2022
+* [CleverTap Android SDK v4.6.5](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+
+
+### October 10, 2022
+* [CleverTap Android SDK v4.6.4](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Xiaomi Push SDK v1.5.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTXIAOMIPUSHCHANGELOG.md)
+
+
+### September 20, 2022
+* [CleverTap Android SDK v4.6.3](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* Note: Kindly upgrade to version CleverTap Android SDK v4.6.3 and above if you face any issues with app inbox
+
+### September 13, 2022
+* [CleverTap Android SDK v4.6.2](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Push Templates SDK v1.0.5](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTPUSHTEMPLATESCHANGELOG.md)
+* Note: Kindly upgrade to version CleverTap Android SDK v4.6.3 and above if you face any issues with app inbox
+
+
+### September 6, 2022
+
+* [CleverTap Android SDK v4.6.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Xiaomi Push SDK v1.5.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTXIAOMIPUSHCHANGELOG.md)  
+* [CleverTap Huawei Push SDK v1.3.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTHUAWEIPUSHCHANGELOG.md)
+
+### August 4, 2022
+
+* [CleverTap Android SDK v4.6.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Push Templates SDK v1.0.4](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTPUSHTEMPLATESCHANGELOG.md)
+
+### July 22, 2022
+
+* [CleverTap Android SDK v4.5.2](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Push Templates SDK v1.0.3](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTPUSHTEMPLATESCHANGELOG.md)
+
+### July 12, 2022
+
+* [CleverTap Android SDK v4.5.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+
+### June 3, 2022
+
+* [CleverTap Android SDK v4.5.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Xiaomi Push SDK v1.4.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTXIAOMIPUSHCHANGELOG.md)
+
+### April 26, 2022
+
+* [CleverTap Push Templates SDK v1.0.2](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTPUSHTEMPLATESCHANGELOG.md)
+* [CleverTap Huawei Push SDK v1.3.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTHUAWEIPUSHCHANGELOG.md)
+
+### March 2, 2022
+
+* [CleverTap Push Templates SDK v1.0.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTPUSHTEMPLATESCHANGELOG.md)
+* [CleverTap Xiaomi Push SDK v1.3.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTXIAOMIPUSHCHANGELOG.md)
+
+### December 20, 2021
+
+* [CleverTap Android SDK v4.4.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Push Templates SDK v1.0.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTPUSHTEMPLATESCHANGELOG.md)
+* [CleverTap Xiaomi Push SDK v1.2.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTXIAOMIPUSHCHANGELOG.md)
+* [CleverTap Huawei Push SDK v1.2.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTHUAWEIPUSHCHANGELOG.md)
+
+### November 25, 2021
+
+* [CleverTap Android SDK v4.3.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+
+### November 2, 2021
+
+* [CleverTap Android SDK v4.3.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Geofence SDK v1.1.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTGEOFENCECHANGELOG.md)
+* [CleverTap Xiaomi Push SDK v1.1.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTXIAOMIPUSHCHANGELOG.md)
+* [CleverTap Huawei Push SDK v1.1.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTHUAWEIPUSHCHANGELOG.md)
+
+
+### July 15, 2021
+
+* [CleverTap Android SDK v4.2.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Huawei Push SDK v1.0.2](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTHUAWEIPUSHCHANGELOG.md)
+
+### May 4, 2021
+
+* [CleverTap Android SDK v4.1.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Xiaomi Push SDK v1.0.2](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTXIAOMIPUSHCHANGELOG.md)
+
+### April 13, 2021
+
+* [CleverTap Android SDK v4.1.0](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+* [CleverTap Geofence SDK v1.0.2](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTGEOFENCECHANGELOG.md)
+* [CleverTap Xiaomi Push SDK v1.0.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTXIAOMIPUSHCHANGELOG.md)
+* [CleverTap Huawei Push SDK v1.0.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTHUAWEIPUSHCHANGELOG.md)
+
+### February 21, 2021
+
+* [CleverTap Android SDK v4.0.3](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+
+### December 28, 2020
+
+* [CleverTap Android SDK v4.0.2](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
+
+### November 30, 2020
+
+* [CleverTap Android SDK v4.0.1](https://github.com/CleverTap/clevertap-android-sdk/blob/master/docs/CTCORECHANGELOG.md)
 
 ### October 1, 2020
 
@@ -205,7 +382,7 @@ Note: To support multi-value user profile properties, `CleverTap.profile.getProp
 * Fixed InApp Activity exclude feature
 
 ### Version 2.0.3 (December 09, 2015)
-* Added SyncListener to notify application code of User Profile synchronization updates
+* Added SyncListener to notify application code of User Profile synchronization updates.
 * Added ability to push custom error events: `clevertap.event.pushError(String, int)`
 * Removed `clevertap.profile.pushGraphUser(com.facebook...)`
 * Requires update to Android Support Library, revision 23.1.1

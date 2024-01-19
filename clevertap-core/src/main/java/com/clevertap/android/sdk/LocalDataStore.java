@@ -1,20 +1,34 @@
 package com.clevertap.android.sdk;
 
+import static com.clevertap.android.sdk.Constants.piiDBKeys;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
+
+import androidx.annotation.RestrictTo;
+import androidx.annotation.RestrictTo.Scope;
+import androidx.annotation.WorkerThread;
+
+import com.clevertap.android.sdk.cryption.CryptHandler;
+import com.clevertap.android.sdk.cryption.CryptUtils;
+import com.clevertap.android.sdk.db.DBAdapter;
+import com.clevertap.android.sdk.events.EventDetail;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 @SuppressWarnings("unused")
-class LocalDataStore {
+@RestrictTo(Scope.LIBRARY)
+public class LocalDataStore {
 
     private static long EXECUTOR_THREAD_ID = 0;
 
@@ -28,25 +42,31 @@ class LocalDataStore {
 
     private final HashMap<String, Object> PROFILE_FIELDS_IN_THIS_SESSION = new HashMap<>();
 
-    private CleverTapInstanceConfig config;
+    private final CleverTapInstanceConfig config;
 
-    private Context context;
+    private final Context context;
+
+    private final CryptHandler cryptHandler;
 
     private DBAdapter dbAdapter;
 
-    private ExecutorService es;
+    private final ExecutorService es;
 
     private final String eventNamespace = "local_events";
 
+    private boolean isProfileDataLoaded = false;
 
-    LocalDataStore(Context context, CleverTapInstanceConfig config) {
+
+    LocalDataStore(Context context, CleverTapInstanceConfig config, CryptHandler cryptHandler) {
         this.context = context;
         this.config = config;
         this.es = Executors.newFixedThreadPool(1);
+        this.cryptHandler = cryptHandler;
         inflateLocalProfileAsync(context);
     }
 
-    void changeUser() {
+    @WorkerThread
+    public void changeUser() {
         resetLocalProfileSync();
     }
 
@@ -94,11 +114,16 @@ class LocalDataStore {
         return getProfileValueForKey(key);
     }
 
-    Object getProfileValueForKey(String key) {
+    public Object getProfileValueForKey(String key) {
         return _getProfileProperty(key);
     }
 
-    void persistEvent(Context context, JSONObject event, int type) {
+    public boolean getIsProfileDataLoaded() {
+        return isProfileDataLoaded;
+    }
+
+    @WorkerThread
+    public void persistEvent(Context context, JSONObject event, int type) {
 
         if (event == null) {
             return;
@@ -113,6 +138,7 @@ class LocalDataStore {
         }
     }
 
+    @WorkerThread
     void removeProfileField(String key) {
         removeProfileField(key, false, true);
     }
@@ -124,7 +150,8 @@ class LocalDataStore {
         removeProfileFields(fields, false);
     }
 
-    void setDataSyncFlag(JSONObject event) {
+    @WorkerThread
+    public void setDataSyncFlag(JSONObject event) {
         try {
             // Check the personalisation flag
             boolean enablePersonalisation = this.config.isPersonalizationEnabled();
@@ -179,8 +206,9 @@ class LocalDataStore {
         setProfileFields(fields, false);
     }
 
+    //Not used.Remove later
     @SuppressWarnings("rawtypes")
-    void syncWithUpstream(Context context, JSONObject response) {
+    public void syncWithUpstream(Context context, JSONObject response) {
         try {
             JSONObject eventUpdates = null;
             JSONObject profileUpdates = null;
@@ -273,8 +301,12 @@ class LocalDataStore {
 
         synchronized (PROFILE_FIELDS_IN_THIS_SESSION) {
             try {
+                Object property = PROFILE_FIELDS_IN_THIS_SESSION.get(key);
+                if (property instanceof String && CryptHandler.isTextEncrypted((String) property)) {
+                    getConfigLogger().verbose(getConfigAccountId(), "Failed to retrieve local profile property because it wasn't decrypted");
+                    return null;
+                }
                 return PROFILE_FIELDS_IN_THIS_SESSION.get(key);
-
             } catch (Throwable t) {
                 getConfigLogger().verbose(getConfigAccountId(), "Failed to retrieve local profile property", t);
                 return null;
@@ -400,7 +432,6 @@ class LocalDataStore {
     }
 
     // local cache/profile key expiry handling
-
     private void inflateLocalProfileAsync(final Context context) {
 
         final String accountID = this.config.getAccountId();
@@ -416,6 +447,7 @@ class LocalDataStore {
                         JSONObject profile = dbAdapter.fetchUserProfileById(accountID);
 
                         if (profile == null) {
+                            isProfileDataLoaded = true;
                             return;
                         }
 
@@ -431,12 +463,20 @@ class LocalDataStore {
                                     JSONArray jsonArray = profile.getJSONArray(key);
                                     PROFILE_FIELDS_IN_THIS_SESSION.put(key, jsonArray);
                                 } else {
-                                    PROFILE_FIELDS_IN_THIS_SESSION.put(key, value);
+                                    Object decrypted = value;
+                                    if (value instanceof String) {
+                                        decrypted = cryptHandler.decrypt((String) value, key);
+                                        if (decrypted == null)
+                                            decrypted = value;
+                                    }
+                                    PROFILE_FIELDS_IN_THIS_SESSION.put(key, decrypted);
                                 }
                             } catch (JSONException e) {
                                 // no-op
                             }
                         }
+
+                        isProfileDataLoaded = true;
 
                         getConfigLogger().verbose(getConfigAccountId(),
                                 "Local Data Store - Inflated local profile " + PROFILE_FIELDS_IN_THIS_SESSION
@@ -493,8 +533,29 @@ class LocalDataStore {
             @Override
             public void run() {
                 synchronized (PROFILE_FIELDS_IN_THIS_SESSION) {
-                    long status = dbAdapter
-                            .storeUserProfile(profileID, new JSONObject(PROFILE_FIELDS_IN_THIS_SESSION));
+                    HashMap<String, Object> profile = PROFILE_FIELDS_IN_THIS_SESSION;
+
+                    boolean passFlag = true;
+                    // Encrypts only the pii keys before storing to DB
+                    for (String piiKey : piiDBKeys) {
+                        if (profile.get(piiKey) != null) {
+                            Object value = profile.get(piiKey);
+                            if (value instanceof String) {
+                                String encrypted = cryptHandler.encrypt((String) value, piiKey);
+                                if (encrypted == null) {
+                                    passFlag = false;
+                                    continue;
+                                }
+                                profile.put(piiKey, encrypted);
+                            }
+                        }
+                    }
+                    JSONObject jsonObjectEncrypted = new JSONObject(profile);
+
+                    if (!passFlag)
+                        CryptUtils.updateEncryptionFlagOnFailure(context, config, Constants.ENCRYPTION_FLAG_DB_SUCCESS, cryptHandler);
+
+                    long status = dbAdapter.storeUserProfile(profileID, jsonObjectEncrypted);
                     getConfigLogger().verbose(getConfigAccountId(),
                             "Persist Local Profile complete with status " + status + " for id " + profileID);
                 }
@@ -618,6 +679,7 @@ class LocalDataStore {
         StorageHelper.putInt(context, storageKeyWithSuffix("local_cache_expires_in"), ttl);
     }
 
+
     private void setProfileField(String key, Object value, Boolean fromUpstream, boolean persist) {
         if (key == null || value == null) {
             return;
@@ -671,6 +733,7 @@ class LocalDataStore {
         return (value == null) ? "" : value.toString();
     }
 
+    //Not used.Remove later
     @SuppressWarnings({"rawtypes", "ConstantConditions"})
     private JSONObject syncEventsFromUpstream(Context context, JSONObject events) {
         try {
@@ -753,7 +816,7 @@ class LocalDataStore {
             return null;
         }
     }
-
+    //Not used.Remove later
     @SuppressWarnings("rawtypes")
     private JSONObject syncProfile(JSONObject remoteProfile) {
 

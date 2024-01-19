@@ -2,17 +2,16 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "30.0.2"
-    testOptions.unitTests.includeAndroidResources = true
+    compileSdkVersion Android.compileSdkVersionVal
+    buildToolsVersion Android.buildToolsVersionVal
 
     defaultConfig {
-        minSdkVersion 16
-        targetSdkVersion 29
+        minSdkVersion Android.minSdkVersionVal
+        targetSdkVersion Android.targetSdkVersionVal
         versionCode 1
         versionName "1.0"
 
-//        instrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+//        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
 
@@ -22,32 +21,38 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-
 }
 
 dependencies {
     api project(':clevertap-core')
     // Unit ing dependencies
-    api deps.junit
+    api Libs.junit_platform_runner
+    api Libs.junit_jupiter_api
+    api Libs.junit_jupiter_engine
+    api Libs.kotlin_stdlib_jdk7
+    api Libs.jsonassert
+    api Libs.gson
     def mockito_version = '3.5.11'
-    api deps.mockitoCore
+    api Libs.mockito_core
     api "org.mockito:mockito-inline:$mockito_version"
-    api "org.robolectric:robolectric:$robolectricVersion"
-    api 'org.opentest4j:opentest4j:1.2.0'
+    api Libs.robolectric
+    api Libs.opentest4j
 
-    api deps.androidXTestCore
-    api deps.androidXJunitExt
+    api Libs.androidx_test_core
+    api Libs.androidx_test_ext_junit
 
-    api deps.fragment
+    api Libs.fragment
     // AndroidJUnitRunner and JUnit Rules
-    api deps.androidXTestRunner
-    api deps.androidXTestRules
+    api Libs.androidx_test_runner
+    api Libs.androidx_test_rules
+    api Libs.espresso_core
 
-    api deps.espressoCore
+    api Libs.catch_exception
+    api Libs.androidx_core_core
 
-    api 'eu.codearte.catch-exception:catch-exception:2.0'
-    api "androidx.core:core-ktx:1.3.1"
-    api deps.kotlinStdlib
+    api Libs.kotlin_test
+    api Libs.truth
 
-    api 'org.jetbrains.kotlin:kotlin-test:1.1.51'
+    api Libs.xmlpull
+
 }

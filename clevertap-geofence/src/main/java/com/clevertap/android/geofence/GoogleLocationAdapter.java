@@ -20,6 +20,7 @@ import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import java.util.concurrent.TimeUnit;
@@ -36,12 +37,12 @@ class GoogleLocationAdapter implements CTLocationAdapter {
      * Applicable for both fetch modes ({@link CTGeofenceSettings#FETCH_CURRENT_LOCATION_PERIODIC}) and
      * ({@link CTGeofenceSettings#FETCH_LAST_LOCATION_PERIODIC})
      */
-    static final long INTERVAL_IN_MILLIS = 30 * 60 * 1000;
+    static final long INTERVAL_IN_MILLIS = 30 * 60 * 1000L;
 
     /**
      * Applicable only for ({@link CTGeofenceSettings#FETCH_CURRENT_LOCATION_PERIODIC})
      */
-    static final long INTERVAL_FASTEST_IN_MILLIS = 30 * 60 * 1000;
+    static final long INTERVAL_FASTEST_IN_MILLIS = 30 * 60 * 1000L;
 
     /**
      * Applicable only for ({@link CTGeofenceSettings#FETCH_CURRENT_LOCATION_PERIODIC})
@@ -51,7 +52,7 @@ class GoogleLocationAdapter implements CTLocationAdapter {
     /**
      * Applicable only for ({@link CTGeofenceSettings#FETCH_LAST_LOCATION_PERIODIC})
      */
-    private static final long FLEX_INTERVAL_IN_MILLIS = 10 * 60 * 1000;
+    private static final long FLEX_INTERVAL_IN_MILLIS = 10 * 60 * 1000L;
 
     private boolean backgroundLocationUpdatesEnabled;
 
@@ -66,7 +67,7 @@ class GoogleLocationAdapter implements CTLocationAdapter {
     /**
      * Applicable only for ({@link CTGeofenceSettings#FETCH_CURRENT_LOCATION_PERIODIC})
      */
-    private int locationAccuracy = LocationRequest.PRIORITY_HIGH_ACCURACY;
+    private int locationAccuracy = Priority.PRIORITY_HIGH_ACCURACY;
 
     private int locationFetchMode;
 
@@ -225,13 +226,13 @@ class GoogleLocationAdapter implements CTLocationAdapter {
         int accuracy = geofenceSettings.getLocationAccuracy();
         switch (accuracy) {
             case 1:
-                locationAccuracy = LocationRequest.PRIORITY_HIGH_ACCURACY;
+                locationAccuracy = Priority.PRIORITY_HIGH_ACCURACY;
                 break;
             case 2:
-                locationAccuracy = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY;
+                locationAccuracy = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
                 break;
             case 3:
-                locationAccuracy = LocationRequest.PRIORITY_LOW_POWER;
+                locationAccuracy = Priority.PRIORITY_LOW_POWER;
                 break;
         }
     }
@@ -307,13 +308,10 @@ class GoogleLocationAdapter implements CTLocationAdapter {
      * @return an instance of {@link LocationRequest}
      */
     private LocationRequest getLocationRequest() {
-        LocationRequest locationRequest = LocationRequest.create();
-        locationRequest.setInterval(interval);
-        locationRequest.setFastestInterval(fastestInterval);
-        locationRequest.setPriority(locationAccuracy);
-        locationRequest.setSmallestDisplacement(smallestDisplacement);
-
-        return locationRequest;
+        return new LocationRequest.Builder(locationAccuracy, interval)
+                .setMinUpdateIntervalMillis(fastestInterval)
+                .setMinUpdateDistanceMeters(smallestDisplacement)
+                .build();
     }
 
     /**

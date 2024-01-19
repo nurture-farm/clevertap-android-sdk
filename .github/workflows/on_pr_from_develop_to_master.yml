@@ -1,0 +1,40 @@
+name: validate PR raised from develop branched to master branch
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  lint-static_checks-test-build:
+    if: github.head_ref == 'develop'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout the code from Repo
+        uses: actions/checkout@v3
+
+      - name: Setup JDK 11.
+        uses: ./.github/mini_flows/setup_jdk
+
+      - name: Mandatory File Changes
+        uses: ./.github/mini_flows/mandatory_filechanges
+
+      - name: Run lint tests and Upload results
+        uses: ./.github/mini_flows/lint
+
+      - name: Static Code Check Via detekt
+        uses: ./.github/mini_flows/codechecks_detekt
+
+      - name: Static Code Check Via checkstyle
+        uses: ./.github/mini_flows/codechecks_checkstyle
+
+      - name: Unit Tests and Jacoco Coverage (DEBUG)
+        uses: ./.github/mini_flows/test_and_coverage_debug
+
+      - name: Unit Tests and Jacoco Coverage (RELEASE)
+        uses: ./.github/mini_flows/test_and_coverage_release
+
+      - name: Build AARs (RELEASE)
+        uses: ./.github/mini_flows/build_code_release

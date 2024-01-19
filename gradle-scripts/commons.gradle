@@ -1,14 +1,12 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply plugin: 'com.github.dcendents.android-maven'
-apply plugin: 'com.jfrog.bintray'
-apply plugin: 'jacoco'
+//apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'maven-publish'
+// apply plugin: 'signing'
+apply from: "${project.rootDir}/gradle-scripts/jacoco_root.gradle"
 
 ext {
-    bintrayRepo = 'Maven'
-    bintrayName = libraryName
-    org = 'clevertap'
-
+    Repo = 'Maven'
     publishedGroupId = 'com.clevertap.android'
 
     siteUrl = 'https://github.com/CleverTap/clevertap-android-sdk'
@@ -19,22 +17,31 @@ ext {
     developerEmail = 'support@clevertap.com'
 }
 
+// ext["signing.keyId"] = ''
+// ext["signing.password"] = ''
+// ext["signing.secretKeyRingFile"] = ''
+// ext["ossrhUsername"] = ''
+// ext["ossrhPassword"] = ''
+// ext["sonatypeStagingProfileId"] = ''
+
 version = libraryVersion
 group = publishedGroupId
 
 def (major,minor,patch) = libraryVersion.split("\\.")
-def derivedVersionCode = "${major}0${minor}0${patch}".toInteger()
-def derivedVersionName = "${libraryVersion}x"
 
 android {
-    compileSdkVersion compileSdkVersionVal
-    buildToolsVersion buildToolsVersionVal
+    compileSdkVersion Android.compileSdkVersionVal
+    buildToolsVersion Android.buildToolsVersionVal
 
     defaultConfig {
         minSdkVersion minSdkVersionVal
-        targetSdkVersion targetSdkVersionVal
-        versionCode derivedVersionCode
-        versionName derivedVersionName
+        targetSdkVersion Android.targetSdkVersionVal
+        versionCode "${major}0${minor}0${patch}".toInteger()
+        versionName libraryVersion
+
+        //AGP 4.1.0 change https://developer.android.com/studio/releases/gradle-plugin#version_properties_removed_from_buildconfig_class_in_library_projects
+        buildConfigField ("int", "VERSION_CODE", "$versionCode")
+        buildConfigField ("String", "VERSION_NAME", "\"$versionName\"")
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles 'consumer-rules.pro'
@@ -42,18 +49,22 @@ android {
 
     buildTypes {
         debug {
-            testCoverageEnabled true //To get coverage reports for instrumentation tests
+            //only true when a command is run with argument, like this : `gradle <command>  -Pcoverage='true'
+            if(project.hasProperty('coverage')&& project.property('coverage')=='true') {
+                System.out.println("coverage="+project.property('coverage'))
+                testCoverageEnabled = true
+            }
             buildConfigField "String", "SDK_VERSION_STRING",
                     "\"!SDK-VERSION-STRING!:$publishedGroupId:$artifact:$major.$minor.$patch.0\""
-            buildConfigField "int", "VERSION_CODE", "$derivedVersionCode"
-            buildConfigField "String", "VERSION_NAME", "\"$derivedVersionName\""
         }
         release {
+            //only true when a command is run with argument, like this : `gradle <command>  -Pcoverage='true'
+            if(project.hasProperty('coverage') && project.property('coverage')=='true') {
+                System.out.println("coverage="+project.property('coverage'))
+                testCoverageEnabled = true
+            }
             buildConfigField "String", "SDK_VERSION_STRING",
                     "\"!SDK-VERSION-STRING!:$publishedGroupId:$artifact:$major.$minor.$patch.0\""
-            buildConfigField "int", "VERSION_CODE", "$derivedVersionCode"
-            buildConfigField "String", "VERSION_NAME", "\"$derivedVersionName\""
-
             minifyEnabled false// keep it false we will supply proguard through consumerProguardFiles
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -66,9 +77,9 @@ android {
     libraryVariants.all { variant ->
         variant.outputs.all {
             if (variant.getName().toLowerCase().contains('release')) {
-                outputFileName = "${artifact}-${derivedVersionName}.aar"
+                outputFileName = "${artifact}-${libraryVersion}.aar"
             } else if (variant.getName().toLowerCase().contains('debug')) {
-                outputFileName = "${artifact}-${variant.name}-${derivedVersionName}.aar"
+                outputFileName = "${artifact}-${variant.name}-${libraryVersion}.aar"
             }
         }
     }
@@ -78,26 +89,10 @@ android {
         unitTests {
             includeAndroidResources = true
             returnDefaultValues = true
+            all {
+                jvmArgs '-noverify'
+            }
         }
-        unitTests.all {
-            jvmArgs '-noverify'
-        }
-    }
-}
-
-jacoco {
-    toolVersion = "$jacocoVersion"
-}
-
-tasks.withType(Test) {
-    jacoco.includeNoLocationClasses = true
-}
-
-task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest', 'createDebugCoverageReport']) {
-
-    reports {
-        xml.enabled = true
-        html.enabled = true
     }
 
     def fileFilter = ['**/R.class', '**/R$*.class', '**/BuildConfig.*', '**/Manifest*.*', '**/*Test*.*', 'android/**/*.*']
@@ -114,74 +109,94 @@ task jacocoTestReport(type: JacocoReport, dependsOn: ['testDebugUnitTest', 'crea
 Properties properties = new Properties()
 if (project.rootProject.file('local.properties').exists()) {
     properties.load(project.rootProject.file('local.properties').newDataInputStream())
-}
-
-bintray {
-    user = properties.getProperty("bintray.user")
-    key = properties.getProperty("bintray.apikey")
-
-    configurations = ['archives']
-    pkg {
-        repo = bintrayRepo
-        name = bintrayName
-        userOrg = org
-        desc = libraryDescription
-        websiteUrl = siteUrl
-        vcsUrl = gitUrl
-        licenses = allLicenses
-        publish = true
-        publicDownloadNumbers = true
-        version {
-            desc = libraryDescription
-        }
+    properties.each { name, value ->
+        ext[name] = value
     }
 }
-
-install {
-    repositories.mavenInstaller {
-        // This generates POM.xml with proper parameters
-        pom {
-            project {
-                packaging 'aar'
-                groupId publishedGroupId
-                artifactId artifact
-
-                // Add your description here
-                name libraryName
-                description libraryDescription
-                url siteUrl
-
-                // Set your license
-                licenses {
-                    license {
-                        name licenseName
-                        url licenseUrl
-                    }
-                }
-                developers {
-                    developer {
-                        id developerId
-                        name developerName
-                        email developerEmail
-                    }
-                }
-                scm {
-                    connection gitUrl
-                    developerConnection gitUrl
-                    url siteUrl
-
-                }
-            }
-        }
-    }
-}
+// else{
+//     ext["signing.keyId"] = System.getenv('SIGNING_KEY_ID')
+//     ext["signing.password"] = System.getenv('SIGNING_PASSWORD')
+//     ext["signing.secretKeyRingFile"] = System.getenv('SIGNING_SECRET_KEY_RING_FILE')
+//     ext["ossrhUsername"] = System.getenv('OSSRH_USERNAME')
+//     ext["ossrhPassword"] = System.getenv('OSSRH_PASSWORD')
+//     ext["sonatypeStagingProfileId"] = System.getenv('SONATYPE_STAGING_PROFILE_ID')
+// }
 
 task sourcesJar(type: Jar) {
     baseName "$artifact"
     from android.sourceSets.main.java.srcDirs
-    classifier = 'sources'
+    archiveClassifier.set('sources')
 }
 
 artifacts {
     archives sourcesJar
 }
+
+afterEvaluate {
+    publishing {
+        publications {
+            // Creates a Maven publication called "release".
+            release(MavenPublication) {
+                // Applies the component for the release build variant.
+                from components.release
+
+                // You can then customize attributes of the publication as shown below.
+                groupId publishedGroupId
+                artifactId artifact
+                version version
+
+                artifact sourcesJar
+
+                pom {
+                    name = artifact
+                    description = libraryDescription
+                    url = siteUrl
+                    packaging = "aar"
+                    licenses {
+                        license {
+                            name = licenseName
+                            url = licenseUrl
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = developerId
+                            name = developerName
+                            email = developerEmail
+                        }
+                        // Add all other devs here...
+                    }
+                    // Version control info - if you're using GitHub, follow the format as seen here
+                    scm {
+                        connection = 'scm:git:github.com/CleverTap/clevertap-android-sdk.git'
+                        developerConnection = 'scm:git:ssh:github.com/CleverTap/clevertap-android-sdk.git'
+                        url = 'https://github.com/CleverTap/clevertap-android-sdk/tree/master'
+                    }
+                }
+            }
+        }
+        // The repository to publish to, Sonatype/MavenCentral
+        repositories {
+            maven {
+                // This is an arbitrary name, you may also use "mavencentral" or
+                // any other name that's descriptive for you
+                name = Repo
+                url = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+                // credentials {
+                //     username ossrhUsername
+                //     password ossrhPassword
+                // }
+            }
+        }
+    }
+}
+
+artifacts {
+    archives sourcesJar
+}
+
+// signing {
+//     sign publishing.publications
+// }
+apply from: "${project.rootDir}/gradle-scripts/checkstyle.gradle"
+apply from: "${project.rootDir}/gradle-scripts/detekt.gradle"

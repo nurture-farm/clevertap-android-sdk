@@ -1,6 +1,7 @@
 package com.clevertap.android.sdk.pushnotification;
 
 import static com.clevertap.android.sdk.Constants.WZRK_ACCT_ID_KEY;
+import static com.clevertap.android.sdk.Constants.WZRK_PUSH_ID;
 
 import android.os.Bundle;
 import androidx.annotation.RestrictTo;
@@ -16,8 +17,9 @@ public class PushNotificationUtil {
         return message != null ? message.getString(WZRK_ACCT_ID_KEY, defaultValue) : defaultValue;
     }
 
-    private PushNotificationUtil() {
-
+    public static String getPushIdFromNotificationBundle(Bundle message) {
+        String defaultValue = "";
+        return message != null ? message.getString(WZRK_PUSH_ID, defaultValue) : defaultValue;
     }
 
     /**
@@ -42,6 +44,14 @@ public class PushNotificationUtil {
             }
         }
         return pushTypes;
+    }
+
+    private PushNotificationUtil() {
+
+    }
+
+    public static String buildPushNotificationRenderedListenerKey(String accountId, String pushId){
+        return accountId+"_"+pushId;
     }
 
 }

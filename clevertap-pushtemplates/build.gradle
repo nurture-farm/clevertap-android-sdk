@@ -1,0 +1,38 @@
+import static de.fayard.refreshVersions.core.Versions.versionFor
+
+ext {
+    libraryName = 'PushTemplates'
+    artifact = 'push-templates'
+    libraryDescription = 'The CleverTap Android Push Templates SDK'
+
+    libraryVersion = versionFor("version.com.clevertap.android..push-templates")
+
+    licenseName = 'MIT License'
+    licenseUrl = 'https://opensource.org/licenses/MIT'
+    allLicenses = ["MIT"]
+    minSdkVersionVal = Android.minSdkVersionVal
+}
+
+apply from: "../gradle-scripts/commons.gradle"
+
+android {
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation project(':clevertap-core')
+    implementation Libs.core_ktx
+    implementation Libs.appcompat
+    implementation Libs.material
+
+
+    testImplementation Libs.junit_junit
+    androidTestImplementation Libs.androidx_test_ext_junit
+    androidTestImplementation Libs.espresso_core
+}

@@ -8,7 +8,13 @@
 <br /><br />
 <button onclick='invokeEventWithProps()'>Push Event Props</button>
 <br /><br />
+<button onclick='invokeChargedEvent()'>Push Charged Event</button>
+<br /><br />
 <button onclick='invokePushProfile()'>Push Profile</button>
+<br /><br />
+<button onclick='promptPushPermissionWithFallback()'>Push Primer with fallbackToSettings - true</button>
+<br /><br />
+<button onclick='promptPushPermissionWithoutFallback()'>Push Primer with fallbackToSettings - false</button>
 <br /><br />
 <button onclick='invokeAddProp()'>Add Property</button>
 <br /><br />
@@ -22,19 +28,64 @@
 <br /><br />
 <button onclick='invokeSetMultiValue()'>Set Multivalues</button>
 <br /><br />
+<button onclick='invokeOnUserLogin()'>On User Login</button>
+<br /><br />
+
+<button onclick='invokeIncrementValue()'>Increment value for key 'cars'</button>
+<br /><br />
+<button onclick='invokeDecrementValue()'>Decrement value for key 'cars'</button>
+<br /><br />
+
+
+<button onclick='invokeIncrementValueDouble()'>Increment value for key 'temperature'</button>
+<br /><br />
+<button onclick='invokeDecrementValueDouble()'>Decrement value for key 'temperature'</button>
+<br /><br />
+
+
+
 <script>
         console.log('LOG')
         function invokeEvent() {
             CleverTap.pushEvent('WebView button clicked')
         }
+        function promptPushPermissionWithFallback() {
+            CleverTap.promptPushPermission(true)
+        }
+        function promptPushPermissionWithoutFallback() {
+            CleverTap.promptPushPermission(false)
+        }
         function invokeEventWithProps(){
         var props = {foo: 'xyz', lang: 'French'};
             CleverTap.pushEvent('WebView button clicked',JSON.stringify(props))
+        }
+        function invokeChargedEvent(){
+        var chargeDetails = {Amount: 300, Payment: 'Card'};
+        var items = [{Category: 'Books', Name: 'Book name', Quantity: 1},{Category: 'Clothes', Name: 'Cloth name', Quantity: 1},{Category: 'Food', Name: 'Food name', Quantity: 1}]
+            CleverTap.pushChargedEvent(JSON.stringify(chargeDetails),JSON.stringify(items))
         }
         function invokePushProfile() {
             var props = {foo: 'xyz', lang: 'French'};
             CleverTap.pushProfile(JSON.stringify(props))
         }
+        function invokeOnUserLogin() {
+            var props = {foo: 'zyx', lang: 'German'};
+            CleverTap.onUserLogin(JSON.stringify(props))
+        }
+        function invokeIncrementValue() {
+            CleverTap.incrementValue('cars',2)
+        }
+        function invokeDecrementValue() {
+            CleverTap.decrementValue('cars',2)
+        }
+
+        function invokeIncrementValueDouble() {
+            CleverTap.incrementValue('temperature',12.5)
+        }
+        function invokeDecrementValueDouble() {
+            CleverTap.decrementValue('temperature',12.5)
+        }
+
         function invokeAddProp(){
             CleverTap.addMultiValueForKey('bar', 'abcd');
         }
@@ -56,11 +107,6 @@
             var values = ['xyz123','xyz1234']
             CleverTap.setMultiValueForKey('foo', JSON.stringify(values));
         }
-
-
-
-
-
 </script>
 </body>
 </html>

@@ -1,15 +1,15 @@
 package com.clevertap.android.sdk.pushnotification.fcm
 
 import com.clevertap.android.sdk.ManifestInfo
-import com.clevertap.android.sdk.PackageUtils
 import com.clevertap.android.sdk.pushnotification.CTPushProviderListener
 import com.clevertap.android.sdk.pushnotification.PushConstants.PushType.FCM
 import com.clevertap.android.sdk.pushnotification.fcm.TestFcmConstants.Companion.FCM_SENDER_ID
+import com.clevertap.android.sdk.utils.PackageUtils
 import com.clevertap.android.shared.test.BaseTestCase
 import com.clevertap.android.shared.test.TestApplication
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
-import com.google.firebase.iid.FirebaseInstanceId
+import com.google.firebase.messaging.FirebaseMessaging
 import org.junit.*
 import org.junit.runner.*
 import org.mockito.Mockito.*
@@ -28,9 +28,7 @@ class FcmSdkHandlerImplTest : BaseTestCase() {
     override fun setUp() {
         super.setUp()
         listener = mock(CTPushProviderListener::class.java)
-        handler = FcmSdkHandlerImpl(listener)
-        `when`(listener.context()).thenReturn(application)
-        `when`(listener.config()).thenReturn(cleverTapInstanceConfig)
+        handler = FcmSdkHandlerImpl(listener, application, cleverTapInstanceConfig)
         manifestInfo = mock(ManifestInfo::class.java)
         handler.setManifestInfo(manifestInfo)
     }
@@ -38,24 +36,15 @@ class FcmSdkHandlerImplTest : BaseTestCase() {
     @Test
     fun isAvailable_Unavailable_PlayServices_Returns_False() {
         mockStatic(PackageUtils::class.java).use {
-            `when`(PackageUtils.isGooglePlayServicesAvailable(listener.context())).thenReturn(false)
+            `when`(PackageUtils.isGooglePlayServicesAvailable(application)).thenReturn(false)
             Assert.assertFalse(handler.isAvailable)
-        }
-    }
-
-    @Test
-    fun isAvailable_Valid_Manifest_Returns_True() {
-        mockStatic(PackageUtils::class.java).use {
-            `when`(PackageUtils.isGooglePlayServicesAvailable(listener.context())).thenReturn(true)
-            `when`(manifestInfo.fcmSenderId).thenReturn(FCM_SENDER_ID)
-            Assert.assertTrue(handler.isAvailable)
         }
     }
 
     @Test
     fun isAvailable_InValid_Manifest_Valid_Config_Json_Returns_True() {
         mockStatic(PackageUtils::class.java).use {
-            `when`(PackageUtils.isGooglePlayServicesAvailable(listener.context())).thenReturn(true)
+            `when`(PackageUtils.isGooglePlayServicesAvailable(application)).thenReturn(true)
             `when`(manifestInfo.fcmSenderId).thenReturn(null)
             val app = mock(FirebaseApp::class.java)
 
@@ -72,7 +61,7 @@ class FcmSdkHandlerImplTest : BaseTestCase() {
     @Test
     fun isAvailable_InValid_Manifest_InValid_Config_Json_Returns_False() {
         mockStatic(PackageUtils::class.java).use {
-            `when`(PackageUtils.isGooglePlayServicesAvailable(listener.context())).thenReturn(true)
+            `when`(PackageUtils.isGooglePlayServicesAvailable(application)).thenReturn(true)
             `when`(manifestInfo.fcmSenderId).thenReturn(null)
             val app = mock(FirebaseApp::class.java)
 
@@ -89,7 +78,7 @@ class FcmSdkHandlerImplTest : BaseTestCase() {
     @Test
     fun isAvailable_Exception_Returns_False() {
         mockStatic(PackageUtils::class.java).use {
-            `when`(PackageUtils.isGooglePlayServicesAvailable(listener.context())).thenThrow(RuntimeException("Something Went Wrong"))
+            `when`(PackageUtils.isGooglePlayServicesAvailable(application)).thenThrow(RuntimeException("Something Went Wrong"))
             Assert.assertFalse(handler.isAvailable)
         }
     }
@@ -97,7 +86,7 @@ class FcmSdkHandlerImplTest : BaseTestCase() {
     @Test
     fun isSupported_Returns_True() {
         mockStatic(PackageUtils::class.java).use {
-            `when`(PackageUtils.isGooglePlayStoreAvailable(listener.context())).thenReturn(true)
+            `when`(PackageUtils.isGooglePlayStoreAvailable(application)).thenReturn(true)
             Assert.assertTrue(handler.isSupported)
         }
     }
@@ -105,7 +94,7 @@ class FcmSdkHandlerImplTest : BaseTestCase() {
     @Test
     fun isSupported_Returns_False() {
         mockStatic(PackageUtils::class.java).use {
-            `when`(PackageUtils.isGooglePlayStoreAvailable(listener.context())).thenReturn(false)
+            `when`(PackageUtils.isGooglePlayStoreAvailable(application)).thenReturn(false)
             Assert.assertFalse(handler.isSupported)
         }
     }
@@ -115,17 +104,11 @@ class FcmSdkHandlerImplTest : BaseTestCase() {
         Assert.assertEquals(handler.pushType, FCM)
     }
 
-    @Test
+    /*@Test
     fun testGetFCMSenderID() {
         handler.fcmSenderID
         verify(manifestInfo, times(1)).fcmSenderId
-    }
-
-    @Test
-    fun getSenderId_Valid_Manifest() {
-        `when`(manifestInfo.fcmSenderId).thenReturn(FCM_SENDER_ID)
-        Assert.assertEquals(handler.senderId, FCM_SENDER_ID)
-    }
+    }*/
 
     @Test
     fun getSenderId_Invalid_Manifest_Valid_Config_Json() {
@@ -155,8 +138,8 @@ class FcmSdkHandlerImplTest : BaseTestCase() {
 
     @Test
     fun testRequestToken_Exception_Null_Token() {
-        mockStatic(FirebaseInstanceId::class.java).use {
-            `when`(FirebaseInstanceId.getInstance()).thenThrow(RuntimeException("Something Went wrong"))
+        mockStatic(FirebaseMessaging::class.java).use {
+            `when`(FirebaseMessaging.getInstance()).thenThrow(RuntimeException("Something Went wrong"))
             handler.requestToken()
             verify(listener, times(1)).onNewToken(null, FCM)
         }

@@ -8,8 +8,12 @@ import android.content.Context;
 import android.os.Process;
 import android.text.TextUtils;
 import androidx.annotation.RestrictTo;
-import com.clevertap.android.sdk.BaseCTApiListener;
+import com.clevertap.android.sdk.CleverTapInstanceConfig;
+import com.clevertap.android.sdk.Constants;
+import com.clevertap.android.sdk.CoreMetaData;
+import com.clevertap.android.sdk.Logger;
 import com.clevertap.android.sdk.ManifestInfo;
+import com.xiaomi.channel.commonutils.android.Region;
 import com.xiaomi.mipush.sdk.MiPushClient;
 import java.util.List;
 
@@ -18,16 +22,25 @@ import java.util.List;
  */
 class XiaomiSdkHandler implements IMiSdkHandler {
 
-    private final BaseCTApiListener ctApiListener;
+    private final Context context;
 
     private boolean isRegistered;
 
+    private final CleverTapInstanceConfig mConfig;
+
     private ManifestInfo manifestInfo;
 
-    XiaomiSdkHandler(BaseCTApiListener ctPushListener) {
-        this.ctApiListener = ctPushListener;
-        this.manifestInfo = ManifestInfo.getInstance(ctPushListener.context());
-        init();
+    XiaomiSdkHandler(final Context context, final CleverTapInstanceConfig config) {
+        this(context, config, true);
+    }
+
+    XiaomiSdkHandler(final Context context, final CleverTapInstanceConfig config, final boolean isInit) {
+        this.context = context.getApplicationContext();
+        mConfig = config;
+        this.manifestInfo = ManifestInfo.getInstance(context);
+        if (isInit) {
+            init();
+        }
     }
 
     @Override
@@ -56,28 +69,46 @@ class XiaomiSdkHandler implements IMiSdkHandler {
             init();
         }
         try {
-            token = MiPushClient.getRegId(ctApiListener.context());
-            ctApiListener.config().log(LOG_TAG, XIAOMI_LOG_TAG + "Xiaomi Token Success- " + token);
+            token = MiPushClient.getRegId(context);
+            mConfig.log(LOG_TAG, XIAOMI_LOG_TAG + "Xiaomi Token Success- " + token);
         } catch (Throwable t) {
-            ctApiListener.config().log(LOG_TAG, XIAOMI_LOG_TAG + "Xiaomi Token Failed");
+            mConfig.log(LOG_TAG, XIAOMI_LOG_TAG + "Xiaomi Token Failed");
         }
 
         return token;
     }
 
+    @Override
+    public void unregisterPush(final Context context) {
+        try {
+            MiPushClient.unregisterPush(context);
+            mConfig.log(LOG_TAG, XIAOMI_LOG_TAG + "Xiaomi Unregister Success");
+        } catch (Throwable t) {
+            mConfig.log(LOG_TAG, XIAOMI_LOG_TAG + "Xiaomi Unregister Failed");
+        }
+    }
+
     @RestrictTo(value = RestrictTo.Scope.LIBRARY)
     public void register(String appId, String appKey) throws RegistrationException {
+        Logger.v("XiaomiSDKHandler: register | called with appid = "+appId + ", appkey="+appKey);
+
         try {
-            MiPushClient.registerPush(ctApiListener.context(), appId, appKey);
+            String region = mConfig.getAccountRegion();
+            region =  (region==null || region.isEmpty())? Constants.REGION_EUROPE : region;
+            Logger.v("XiaomiSDKHandler: register | final region from mConfig = "+region);
+
+            Region xiaomiRegion =  region.equalsIgnoreCase( Constants.REGION_INDIA) ? Region.India : Region.Global;
+            Logger.v("XiaomiSDKHandler: register | final xiaomi region as per manifest = "+xiaomiRegion.name());
+
+            Logger.v("XiaomiSDKHandler: register | final xiaomi setting xiaomi region via  MiPushClient.setRegion(xiaomiRegion) and calling MiPushClient.registerPush(context, appId, appKey);");
+
+            MiPushClient.setRegion(xiaomiRegion);
+            MiPushClient.registerPush(context, appId, appKey);
             isRegistered = true;
-            ctApiListener.config()
-                    .log(LOG_TAG, XIAOMI_LOG_TAG + "Xiaomi Registeration success for appId-" + appId + " and appKey-"
-                            + appKey);
+            mConfig.log(LOG_TAG, XIAOMI_LOG_TAG + "Xiaomi Registeration success for appId-" + appId + " and appKey-" + appKey);
         } catch (Throwable throwable) {
             isRegistered = false;
-            ctApiListener.config()
-                    .log(LOG_TAG,
-                            XIAOMI_LOG_TAG + "Xiaomi Registration failed for appId-" + appId + " appKey-" + appKey);
+            mConfig.log(LOG_TAG, XIAOMI_LOG_TAG + "Xiaomi Registration failed for appId-" + appId + " appKey-" + appKey);
             throw new RegistrationException("Registration failed for appId " + appId + " and appKey " + appKey);
         }
     }
@@ -88,7 +119,7 @@ class XiaomiSdkHandler implements IMiSdkHandler {
 
     boolean shouldInit(String mainProcessName) {
 
-        ActivityManager am = ((ActivityManager) ctApiListener.context().getSystemService(Context.ACTIVITY_SERVICE));
+        ActivityManager am = ((ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE));
 
         List<ActivityManager.RunningAppProcessInfo> processInfos = am.getRunningAppProcesses();
 
@@ -103,8 +134,8 @@ class XiaomiSdkHandler implements IMiSdkHandler {
     }
 
     private void init() {
-        String packageName = ctApiListener.context().getPackageName();
-        if (shouldInit(packageName)) {
+        String packageName = context.getPackageName();
+        if (CoreMetaData.isAppForeground() && shouldInit(packageName)) {
             String appId = appId();
             String appKey = appKey();
             try {

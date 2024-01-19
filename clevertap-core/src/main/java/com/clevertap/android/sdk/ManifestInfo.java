@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.text.TextUtils;
 import androidx.annotation.RestrictTo;
 
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
@@ -25,7 +26,7 @@ public class ManifestInfo {
 
     private static ManifestInfo instance;
 
-    private static String excludedActivities;
+    private static String excludedActivitiesForInApps;
 
     private static boolean sslPinning;
 
@@ -45,7 +46,17 @@ public class ManifestInfo {
 
     private static String xiaomiAppID;
 
+    private final String devDefaultPushChannelId;
+
+    private final String[] profileKeys;
+
+    private static int encryptionLevel;
+
     private static String userType;
+
+    private static String eventPortalDomain;
+
+    private static boolean useCustomDeviceId;
 
     public synchronized static ManifestInfo getInstance(Context context) {
         if (instance == null) {
@@ -81,12 +92,27 @@ public class ManifestInfo {
         userType = _getManifestStringValueForKey(metaData, Constants.LABEL_USER_TYPE);
         notificationIcon = _getManifestStringValueForKey(metaData, Constants.LABEL_NOTIFICATION_ICON);
         useADID = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_USE_GOOGLE_AD_ID));
+        useCustomDeviceId = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_USE_CUSTOM_DEVICE_ID));
         appLaunchedDisabled = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_DISABLE_APP_LAUNCH));
-        excludedActivities = _getManifestStringValueForKey(metaData, Constants.LABEL_INAPP_EXCLUDE);
+        excludedActivitiesForInApps = _getManifestStringValueForKey(metaData, Constants.LABEL_INAPP_EXCLUDE);
         sslPinning = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_SSL_PINNING));
         backgroundSync = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_BACKGROUND_SYNC));
         useCustomID = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_CUSTOM_ID));
         fcmSenderId = _getManifestStringValueForKey(metaData, Constants.LABEL_FCM_SENDER_ID);
+        try {
+            int parsedEncryptionLevel = Integer.parseInt(_getManifestStringValueForKey(metaData,Constants.LABEL_ENCRYPTION_LEVEL));
+            if(parsedEncryptionLevel >= 0 && parsedEncryptionLevel <= 1){
+                encryptionLevel = parsedEncryptionLevel;
+            }
+            else{
+                encryptionLevel = 0;
+                Logger.v("Supported encryption levels are only 0 and 1. Setting it to 0 by default");
+            }
+        } catch (Throwable t){
+            encryptionLevel = 0;
+            Logger.v("Unable to parse encryption level from the Manifest, Setting it to 0 by default", t.getCause());
+        }
+
         if (fcmSenderId != null) {
             fcmSenderId = fcmSenderId.replace("id:", "");
         }
@@ -96,12 +122,52 @@ public class ManifestInfo {
             intentServiceName = _getManifestStringValueForKey(metaData, Constants.LABEL_INTENT_SERVICE);
         }
 
-        xiaomiAppKey = _getManifestStringValueForKey(metaData, Constants.LABEL_XIAOMI_APP_KEY);
-        xiaomiAppID = _getManifestStringValueForKey(metaData, Constants.LABEL_XIAOMI_APP_ID);
+        if (xiaomiAppKey == null) {
+            xiaomiAppKey = _getManifestStringValueForKey(metaData, Constants.LABEL_XIAOMI_APP_KEY);
+        }
+
+        if (xiaomiAppID == null) {
+            xiaomiAppID = _getManifestStringValueForKey(metaData, Constants.LABEL_XIAOMI_APP_ID);
+        }
+
+        devDefaultPushChannelId = _getManifestStringValueForKey(metaData, Constants.LABEL_DEFAULT_CHANNEL_ID);
+
+        profileKeys = parseProfileKeys(metaData);
+    }
+
+    public String getAccountId() {
+        return accountId;
+    }
+
+    public String getEventPortalDomain() {
+        return eventPortalDomain;
+    }
+
+    public String getUserType() {
+        return userType;
+    }
+
+    public String getExcludedActivities() {
+        return excludedActivitiesForInApps;
     }
 
     public String getFCMSenderId() {
         return fcmSenderId;
+    }
+    public String getDevDefaultPushChannelId() {
+        return devDefaultPushChannelId;
+    }
+
+    public String getIntentServiceName() {
+        return intentServiceName;
+    }
+
+    public String getNotificationIcon() {
+        return notificationIcon;
+    }
+
+    public String[] getProfileKeys() {
+        return profileKeys;
     }
 
     public String getXiaomiAppID() {
@@ -115,33 +181,24 @@ public class ManifestInfo {
     boolean enableBeta() {
         return beta;
     }
-
-    String getAccountId() {
-        return accountId;
+    public int getEncryptionLevel(){
+        return encryptionLevel;
     }
 
-    String getAccountRegion() {
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public String getAccountRegion() {
+        Logger.v("ManifestInfo: getAccountRegion called, returning region:"+accountRegion);
         return accountRegion;
-    }
-
-    String getProxyDomain() {
-        return proxyDomain;
     }
 
     String getAcountToken() {
         return accountToken;
     }
 
-    String getExcludedActivities() {
-        return excludedActivities;
-    }
-
-    String getIntentServiceName() {
-        return intentServiceName;
-    }
-
-    String getNotificationIcon() {
-        return notificationIcon;
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public String getProxyDomain() {
+        Logger.v("ManifestInfo: getProxyDomain called, returning proxyDomain:" + proxyDomain);
+        return proxyDomain;
     }
 
     String getPackageName() {
@@ -156,7 +213,8 @@ public class ManifestInfo {
         return backgroundSync;
     }
 
-    boolean isSSLPinningEnabled() {
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public boolean isSSLPinningEnabled() {
         return sslPinning;
     }
 
@@ -168,7 +226,16 @@ public class ManifestInfo {
         return useADID;
     }
 
-    String getUserType() { return userType; }
+    boolean isUseCustomDeviceId() {
+        return useCustomDeviceId;
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    private String[] parseProfileKeys(final Bundle metaData) {
+        String profileKeyString = _getManifestStringValueForKey(metaData, Constants.CLEVERTAP_IDENTIFIER);
+        return !TextUtils.isEmpty(profileKeyString) ? profileKeyString.split(Constants.SEPARATOR_COMMA)
+                : Constants.NULL_STRING_ARRAY;
+    }
 
     static void changeCredentials(String id, String token, String region, String proxy) {
         accountId = id;
@@ -177,6 +244,25 @@ public class ManifestInfo {
         proxyDomain = proxy;
     }
 
+    static void changeXiaomiCredentials(String xiaomiAppID, String xiaomiAppKey) {
+        if (ManifestInfo.xiaomiAppID != null || ManifestInfo.xiaomiAppKey != null) {
+            Logger.i("Xiaomi SDK already initialized with AppID:" + ManifestInfo.xiaomiAppID
+                    + " and AppKey:" + ManifestInfo.xiaomiAppKey + ". Cannot change credentials to "
+                    + xiaomiAppID + " and " + xiaomiAppKey);
+            return;
+        }
+
+        ManifestInfo.xiaomiAppID = xiaomiAppID;
+        ManifestInfo.xiaomiAppKey = xiaomiAppKey;
+    }
+
+    /**
+     * This returns string representation of int,boolean,string,float value of given key
+     *
+     * @param manifest bundle to retrieve values from
+     * @param name     key of bundle
+     * @return string representation of int,boolean,string,float
+     */
     private static String _getManifestStringValueForKey(Bundle manifest, String name) {
         try {
             Object o = manifest.get(name);

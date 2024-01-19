@@ -1,37 +1,63 @@
+import static de.fayard.refreshVersions.core.Versions.versionFor
 ext {
     libraryName = 'CleverTapAndroidSDK'
     artifact = 'clevertap-android-sdk'
     libraryDescription = 'The CleverTap Android SDK'
 
-    libraryVersion = "$coreVersion"
+    libraryVersion = versionFor("version.com.clevertap.android..clevertap-android-sdk")
 
     licenseName = 'The Apache Software License, Version 2.0'
     licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
     allLicenses = ["Apache-2.0"]
-
-    minSdkVersionVal = 16
+    minSdkVersionVal = Android.minSdkVersionVal
 }
 
 apply from: "../gradle-scripts/commons.gradle"
 
-dependencies {
-    compileOnly deps.firebaseMessaging
-    compileOnly deps.exoPlayer
-    compileOnly deps.exoPlayerHls
-    compileOnly deps.exoPlayerUi
-    compileOnly deps.glide
-    //for notification
-    compileOnly deps.androidXCore
-    compileOnly deps.viewPager
-    implementation deps.appcompat
-    implementation deps.recyclerview
-    compileOnly deps.materialDesign
-    compileOnly deps.fragment
-    implementation deps.installreferrer
+android {
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
 
+dependencies {
+    implementation Libs.firebase_messaging
+    implementation Libs.exoplayer
+    implementation Libs.exoplayer_hls
+    implementation Libs.exoplayer_ui
+    implementation Libs.glide
+    //for notification
+    implementation Libs.androidx_core_core
+    implementation Libs.viewpager
+    implementation Libs.appcompat
+    implementation Libs.recyclerview
+    implementation Libs.material
+    implementation Libs.fragment
+    implementation Libs.installreferrer
+
+    implementation Libs.work_runtime
     // Unit testing dependencies
     testImplementation project(':test_shared')
-    testImplementation deps.androidXCoreKTX
-    testImplementation deps.kotlinStdlib
-    testImplementation deps.firebaseMessaging
+    testImplementation Libs.firebase_messaging
+    testImplementation "io.mockk:mockk:1.13.5"
+
+    androidTestImplementation "androidx.work:work-testing:2.7.1"
+    androidTestImplementation "androidx.test:runner:1.5.2"
+    androidTestImplementation "androidx.test:rules:1.5.0"
+    // Optional -- UI testing with Espresso
+    androidTestImplementation Libs.espresso_core
+    // Optional -- UI testing with UI Automator
+    androidTestImplementation "androidx.test.uiautomator:uiautomator:2.3.0-alpha03"
+    // Optional -- UI testing with Compose
+    androidTestImplementation Libs.androidx_test_ext_junit
 }
+
+sonarqube {
+    properties {
+        property "sonar.projectKey", "CleverTap_clevertap-android-sdk"
+        property "sonar.organization", "clevertap"
+        property "sonar.host.url", "https://sonarcloud.io"
+    }
+}
+

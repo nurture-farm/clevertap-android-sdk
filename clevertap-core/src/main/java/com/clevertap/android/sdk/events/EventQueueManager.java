@@ -1,0 +1,649 @@
+package com.clevertap.android.sdk.events;
+
+import static com.clevertap.android.sdk.utils.CTJsonConverter.getErrorObject;
+
+import android.content.Context;
+
+import androidx.annotation.Nullable;
+
+import com.clevertap.android.sdk.BaseCallbackManager;
+import com.clevertap.android.sdk.CTLockManager;
+import com.clevertap.android.sdk.CleverTapInstanceConfig;
+import com.clevertap.android.sdk.Constants;
+import com.clevertap.android.sdk.ControllerManager;
+import com.clevertap.android.sdk.CoreMetaData;
+import com.clevertap.android.sdk.DeviceInfo;
+import com.clevertap.android.sdk.FailureFlushListener;
+import com.clevertap.android.sdk.LocalDataStore;
+import com.clevertap.android.sdk.Logger;
+import com.clevertap.android.sdk.ManifestInfo;
+import com.clevertap.android.sdk.SessionManager;
+import com.clevertap.android.sdk.StorageHelper;
+import com.clevertap.android.sdk.Utils;
+import com.clevertap.android.sdk.cryption.CryptHandler;
+import com.clevertap.android.sdk.db.BaseDatabaseManager;
+import com.clevertap.android.sdk.login.IdentityRepo;
+import com.clevertap.android.sdk.login.IdentityRepoFactory;
+import com.clevertap.android.sdk.login.LoginInfoProvider;
+import com.clevertap.android.sdk.network.BaseNetworkManager;
+import com.clevertap.android.sdk.network.NetworkManager;
+import com.clevertap.android.sdk.task.CTExecutorFactory;
+import com.clevertap.android.sdk.task.MainLooperHandler;
+import com.clevertap.android.sdk.task.Task;
+import com.clevertap.android.sdk.validation.ValidationResult;
+import com.clevertap.android.sdk.validation.ValidationResultStack;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.TimeZone;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+
+public class EventQueueManager extends BaseEventQueueManager implements FailureFlushListener {
+
+    private static final String DEFER_SENDING_EVENT_KEY = "DEFER_SENDING_EVENT_KEY";
+
+    private Runnable commsRunnable = null;
+
+    private final BaseDatabaseManager baseDatabaseManager;
+
+    private final CoreMetaData cleverTapMetaData;
+
+    private final CleverTapInstanceConfig config;
+
+    private final Context context;
+
+    private final CTLockManager ctLockManager;
+
+    private final DeviceInfo deviceInfo;
+
+    private final EventMediator eventMediator;
+
+    private final LocalDataStore localDataStore;
+
+    private final Logger logger;
+
+    private LoginInfoProvider loginInfoProvider;
+
+    private final MainLooperHandler mainLooperHandler;
+
+    private final BaseNetworkManager networkManager;
+
+    private final SessionManager sessionManager;
+
+    private final ValidationResultStack validationResultStack;
+
+    private Runnable pushNotificationViewedRunnable = null;
+
+    private ManifestInfo manifest;
+
+    private Map<String, Object> commonEventData;
+
+    private boolean deferClevertapEventsUntilDataLoaded = true;
+
+    private final ControllerManager controllerManager;
+    private final CryptHandler cryptHandler;
+
+    public EventQueueManager(final BaseDatabaseManager baseDatabaseManager,
+            Context context,
+            CleverTapInstanceConfig config,
+            EventMediator eventMediator,
+            SessionManager sessionManager,
+            BaseCallbackManager callbackManager,
+            MainLooperHandler mainLooperHandler,
+            DeviceInfo deviceInfo,
+            ValidationResultStack validationResultStack,
+            NetworkManager networkManager,
+            CoreMetaData coreMetaData,
+            CTLockManager ctLockManager,
+            final LocalDataStore localDataStore,
+            ControllerManager controllerManager,
+            CryptHandler cryptHandler) {
+        this.baseDatabaseManager = baseDatabaseManager;
+        this.context = context;
+        this.config = config;
+        this.eventMediator = eventMediator;
+        this.sessionManager = sessionManager;
+        this.mainLooperHandler = mainLooperHandler;
+        this.deviceInfo = deviceInfo;
+        this.validationResultStack = validationResultStack;
+        this.networkManager = networkManager;
+        this.localDataStore = localDataStore;
+        logger = this.config.getLogger();
+        cleverTapMetaData = coreMetaData;
+        this.ctLockManager = ctLockManager;
+        this.manifest = ManifestInfo.getInstance(context);
+        this.controllerManager = controllerManager;
+        this.cryptHandler = cryptHandler;
+
+        callbackManager.setFailureFlushListener(this);
+        deferClevertapEventsUntilDataLoaded = (StorageHelper.getInt(context,DEFER_SENDING_EVENT_KEY,1) == 1);
+        loadCommonEventDataFromStorage(context);
+    }
+
+    @Override
+    public void deferClevertapEventsUntilProfileAndDeviceIsFetched(boolean value) {
+        deferClevertapEventsUntilDataLoaded = value;
+        StorageHelper.putInt(context,DEFER_SENDING_EVENT_KEY, value ? 1 : 0);
+    }
+
+    private void loadCommonEventDataFromStorage(Context context) {
+        String commonEventDataStr = StorageHelper.getString(context,"commonEventData",null);
+        commonEventData = new HashMap<String,Object>();
+        if(commonEventDataStr != null){
+            try {
+                JSONObject jsonObject = new JSONObject(commonEventDataStr);
+                Iterator<String> keys = jsonObject.keys();
+                while(keys.hasNext()){
+                    String key = keys.next();
+                    Object value = jsonObject.get(key);
+                    commonEventData.put(key, value);
+                }
+            } catch (JSONException e) {
+            }
+        }
+    }
+
+    // only call async
+    @Override
+    public void addToQueue(final Context context, final JSONObject event, final int eventType) {
+        if (eventType == Constants.NV_EVENT) {
+            config.getLogger()
+                    .verbose(config.getAccountId(), "Pushing Notification Viewed event onto separate queue");
+            processPushNotificationViewedEvent(context, event);
+        } else if(eventType == Constants.DEFINE_VARS_EVENT) {
+            processDefineVarsEvent(context, event);
+        } else {
+            processEvent(context, event, eventType);
+        }
+    }
+
+    private void processDefineVarsEvent(Context context, JSONObject event) {
+        sendImmediately(context, EventGroup.VARIABLES, event);
+    }
+
+    @Override
+    public void failureFlush(Context context) {
+        scheduleQueueFlush(context);
+    }
+
+    @Override
+    public void flush() {
+        flushQueueAsync(context, EventGroup.REGULAR);
+    }
+
+    @Override
+    public void flushQueueAsync(final Context context, final EventGroup eventGroup) {
+        Task<Void> task = CTExecutorFactory.executors(config).postAsyncSafelyTask();
+        task.execute("CommsManager#flushQueueAsync", new Callable<Void>() {
+            @Override
+            public Void call() {
+                if (eventGroup == EventGroup.PUSH_NOTIFICATION_VIEWED) {
+                    logger.verbose(config.getAccountId(),
+                            "Pushing Notification Viewed event onto queue flush sync");
+                } else {
+                    logger.verbose(config.getAccountId(), "Pushing event onto queue flush sync");
+                }
+                flushQueueSync(context, eventGroup);
+                return null;
+            }
+        });
+    }
+
+    /**
+     * Flushes the events queue synchronously with a default null value for the caller.
+     * This is an overloaded method that internally calls {@link EventQueueManager#flushQueueSync(Context, EventGroup, String)}.
+     *
+     * @param context     The Context object.
+     * @param eventGroup  The EventGroup for which the queue needs to be flushed.
+     */
+    @Override
+    public void flushQueueSync(final Context context, final EventGroup eventGroup) {
+        flushQueueSync(context,eventGroup,null);
+    }
+
+    /**
+     * Flushes the events queue synchronously, checking network connectivity, offline mode, and performing handshake if necessary.
+     *
+     * @param context     The Context object.
+     * @param eventGroup  The EventGroup for which the queue needs to be flushed.
+     * @param caller      The optional caller identifier.
+     */
+    @Override
+    public void flushQueueSync(final Context context, final EventGroup eventGroup, @Nullable final String caller) {
+        /*if (caller == null && eventGroup == EventGroup.PUSH_NOTIFICATION_VIEWED)
+            return;*/
+        // Check if network connectivity is available
+        if (!NetworkManager.isNetworkOnline(context)) {
+            logger.verbose(config.getAccountId(), "Network connectivity unavailable. Will retry later");
+            controllerManager.invokeCallbacksForNetworkError();
+            return;
+        }
+
+        // Check if CleverTap instance is set to offline mode
+        if (cleverTapMetaData.isOffline()) {
+            logger.debug(config.getAccountId(),
+                    "CleverTap Instance has been set to offline, won't send events queue");
+            controllerManager.invokeCallbacksForNetworkError();
+            return;
+        }
+
+        // Check if handshake is required for the domain associated with the event group
+        if (networkManager.needsHandshakeForDomain(eventGroup)) {
+            // Perform handshake and then flush the DB queue
+            networkManager.initHandshake(eventGroup, new Runnable() {
+                @Override
+                public void run() {
+                    networkManager.flushDBQueue(context, eventGroup,caller);
+                }
+            });
+        } else {
+            logger.verbose(config.getAccountId(), "Pushing Notification Viewed event onto queue DB flush");
+
+            // No handshake required, directly flush the DB queue
+            networkManager.flushDBQueue(context, eventGroup,caller);
+        }
+    }
+
+    /**
+     * This method is currently used only for syncing of variables. If you find it appropriate you
+     * can add handling of network error similar to flushQueueSync, also check return value of
+     * sendQueue for success.
+     */
+    @Override
+    public void sendImmediately(Context context, EventGroup eventGroup, JSONObject eventData) {
+        if (!NetworkManager.isNetworkOnline(context)) {
+            logger.verbose(config.getAccountId(), "Network connectivity unavailable. Event won't be sent.");
+            return;
+        }
+
+        if (cleverTapMetaData.isOffline()) {
+            logger.debug(config.getAccountId(),
+                "CleverTap Instance has been set to offline, won't send event");
+            return;
+        }
+
+        JSONArray singleEventQueue = new JSONArray().put(eventData);
+
+        if (networkManager.needsHandshakeForDomain(eventGroup)) {
+            networkManager.initHandshake(eventGroup, () -> {
+                networkManager.sendQueue(context, eventGroup, singleEventQueue, null);
+            });
+        } else {
+            networkManager.sendQueue(context, eventGroup, singleEventQueue, null);
+        }
+    }
+
+    public LoginInfoProvider getLoginInfoProvider() {
+        return loginInfoProvider;
+    }
+
+    public void setLoginInfoProvider(final LoginInfoProvider loginInfoProvider) {
+        this.loginInfoProvider = loginInfoProvider;
+    }
+
+    public int getNow() {
+        return (int) (System.currentTimeMillis() / 1000);
+    }
+
+    public void processEvent(final Context context, final JSONObject event, final int eventType) {
+        synchronized (ctLockManager.getEventLock()) {
+            try {
+                if (CoreMetaData.getActivityCount() == 0) {
+                    CoreMetaData.setActivityCount(1);
+                }
+                String type;
+                if (eventType == Constants.PAGE_EVENT) {
+                    type = "page";
+                } else if (eventType == Constants.PING_EVENT) {
+                    type = "ping";
+                    attachMeta(event, context);
+                    if (event.has("bk")) {
+                        cleverTapMetaData.setBgPing(true);
+                        event.remove("bk");
+                    }
+
+                    //Add a flag to denote, PING event is for geofences
+                    if (cleverTapMetaData.isLocationForGeofence()) {
+                        event.put("gf", true);
+                        cleverTapMetaData.setLocationForGeofence(false);
+                        event.put("gfSDKVersion", cleverTapMetaData.getGeofenceSDKVersion());
+                        cleverTapMetaData.setGeofenceSDKVersion(0);
+                    }
+                } else if (eventType == Constants.PROFILE_EVENT) {
+                    type = "profile";
+                } else if (eventType == Constants.DATA_EVENT) {
+                    type = "data";
+                } else {
+                    type = "event";
+                    addAdditionalEventData(event);
+                }
+
+                // Complete the received event with the other params
+
+                String currentActivityName = cleverTapMetaData.getScreenName();
+                if (currentActivityName != null) {
+                    event.put("n", currentActivityName);
+                }
+
+                int session = cleverTapMetaData.getCurrentSessionId();
+                event.put("s", session);
+                event.put("pg", CoreMetaData.getActivityCount());
+                event.put("type", type);
+                event.put("ep", getNow());
+                event.put("f", cleverTapMetaData.isFirstSession());
+                event.put("lsl", cleverTapMetaData.getLastSessionLength());
+                attachPackageNameIfRequired(context, event);
+
+                // Report any pending validation error
+                ValidationResult vr = validationResultStack.popValidationResult();
+                if (vr != null) {
+                    event.put(Constants.ERROR_KEY, getErrorObject(vr));
+                }
+                localDataStore.setDataSyncFlag(event);
+                baseDatabaseManager.queueEventToDB(context, event, eventType);
+                updateLocalStore(context, event, eventType);
+                scheduleQueueFlush(context);
+
+            } catch (Throwable e) {
+                config.getLogger().verbose(config.getAccountId(), "Failed to queue event: " + event.toString(), e);
+            }
+        }
+    }
+
+    private void addAdditionalEventData(final JSONObject event) throws JSONException {
+        JSONObject evtData = event.getJSONObject("evtData");
+        //Add all common Event Data
+        if (commonEventData != null) {
+            for (Map.Entry<String, Object> entry : commonEventData.entrySet()) {
+                evtData.put(entry.getKey(), entry.getValue());
+            }
+        }
+        Object userId = localDataStore.getProfileValueForKey("userId");
+        if(userId != null){
+            evtData.put("userId",userId);
+        }
+        Object userType = localDataStore.getProfileValueForKey("userType");
+        if(userType == null){
+            userType = manifest.getUserType();
+        }
+        if(userType != null){
+            evtData.put("userType",userType);
+        }
+        evtData.put("deviceId",deviceInfo.getTrackingDeviceId());
+        evtData.put("trackingEnabled",deviceInfo.getTrackingEnabled());
+    }
+
+    public void processPushNotificationViewedEvent(final Context context, final JSONObject event) {
+        synchronized (ctLockManager.getEventLock()) {
+            try {
+                int session = cleverTapMetaData.getCurrentSessionId();
+                event.put("s", session);
+                event.put("type", "event");
+                event.put("ep", getNow());
+                // Report any pending validation error
+                ValidationResult vr = validationResultStack.popValidationResult();
+                if (vr != null) {
+                    event.put(Constants.ERROR_KEY, getErrorObject(vr));
+                }
+                config.getLogger().verbose(config.getAccountId(), "Pushing Notification Viewed event onto DB");
+                baseDatabaseManager.queuePushNotificationViewedEventToDB(context, event);
+                config.getLogger()
+                        .verbose(config.getAccountId(), "Pushing Notification Viewed event onto queue flush");
+                schedulePushNotificationViewedQueueFlush(context);
+            } catch (Throwable t) {
+                config.getLogger()
+                        .verbose(config.getAccountId(),
+                                "Failed to queue notification viewed event: " + event.toString(), t);
+            }
+        }
+    }
+
+    //Profile
+    @Override
+    public void pushBasicProfile(JSONObject baseProfile, boolean removeFromSharedPrefs) {
+        try {
+            String guid = getCleverTapID();
+
+            JSONObject profileEvent = new JSONObject();
+
+            if (baseProfile != null && baseProfile.length() > 0) {
+                Iterator<String> i = baseProfile.keys();
+                IdentityRepo iProfileHandler = IdentityRepoFactory
+                        .getRepo(context, config, deviceInfo, validationResultStack);
+                setLoginInfoProvider(new LoginInfoProvider(context, config, deviceInfo, cryptHandler));
+                while (i.hasNext()) {
+                    String next = i.next();
+
+                    // need to handle command-based JSONObject props here now
+                    Object value = null;
+                    try {
+                        value = baseProfile.getJSONObject(next);
+                    } catch (Throwable t) {
+                        try {
+                            value = baseProfile.get(next);
+                        } catch (JSONException e) {
+                            //no-op
+                        }
+                    }
+
+                    if (value != null) {
+                        profileEvent.put(next, value);
+
+                        // cache the valid identifier: guid pairs
+                        boolean isProfileKey = iProfileHandler.hasIdentity(next);
+
+                        /*If key is present in IdentitySet and removeFromSharedPrefs is true then
+                        proceed to removing PII key(Email) from shared prefs*/
+                        if (isProfileKey && removeFromSharedPrefs){
+                            try{
+                                getLoginInfoProvider().removeValueFromCachedGUIDForIdentifier(guid,next);
+                            } catch (Throwable t){
+                                //no op
+                            }
+                        }else if (isProfileKey) {
+                            try {
+                                getLoginInfoProvider().cacheGUIDForIdentifier(guid, next, value.toString());
+                            } catch (Throwable t) {
+                                // no-op
+                            }
+                        }
+                    }
+                }
+            }
+
+            try {
+                String carrier = deviceInfo.getCarrier();
+                if (carrier != null && !carrier.equals("")) {
+                    profileEvent.put("Carrier", carrier);
+                }
+
+                String cc = deviceInfo.getCountryCode();
+                if (cc != null && !cc.equals("")) {
+                    profileEvent.put("cc", cc);
+                }
+
+                profileEvent.put("tz", TimeZone.getDefault().getID());
+
+                JSONObject event = new JSONObject();
+                event.put("profile", profileEvent);
+                queueEvent(context, event, Constants.PROFILE_EVENT);
+            } catch (JSONException e) {
+                config.getLogger()
+                        .verbose(config.getAccountId(), "FATAL: Creating basic profile update event failed!");
+            }
+        } catch (Throwable t) {
+            config.getLogger().verbose(config.getAccountId(), "Basic profile sync", t);
+        }
+    }
+
+    @Override
+    public void pushInitialEventsAsync() {
+        if (!cleverTapMetaData.inCurrentSession()) {
+            Task<Void> task = CTExecutorFactory.executors(config).postAsyncSafelyTask();
+            task.execute("CleverTapAPI#pushInitialEventsAsync", new Callable<Void>() {
+                @Override
+                public Void call() {
+                    try {
+                        config.getLogger().verbose(config.getAccountId(), "Queuing daily events");
+                        pushBasicProfile(null, false);
+                    } catch (Throwable t) {
+                        config.getLogger().verbose(config.getAccountId(), "Daily profile sync failed", t);
+                    }
+                    return null;
+                }
+            });
+        }
+    }
+
+    /**
+     * Adds a new event to the queue, to be sent later.
+     *
+     * @param context   The Android context
+     * @param event     The event to be queued
+     * @param eventType The type of event to be queued
+     */
+    @Override
+    public Future<?> queueEvent(final Context context, final JSONObject event, final int eventType) {
+        Task<Void> task = CTExecutorFactory.executors(config).postAsyncSafelyTask();
+        return task.submit("queueEvent", new Callable<Void>() {
+            @Override
+            public Void call() {
+                if (eventMediator.shouldDropEvent(event, eventType)) {
+                    return null;
+                }
+                boolean shouldDeferProcessingEvent = false;
+                if(eventMediator.shouldDeferProcessingEvent(event, eventType)){
+                    shouldDeferProcessingEvent = true;
+                    config.getLogger().debug(config.getAccountId(),
+                            "App Launched not yet processed, re-queuing event " + event + "after 2s");
+                }
+                else{
+                    if (deferClevertapEventsUntilDataLoaded) {
+                        if (!localDataStore.getIsProfileDataLoaded()) {
+                            shouldDeferProcessingEvent = true;
+                            config.getLogger().debug(config.getAccountId(),
+                                    "Profile Data not yet loaded, re-queuing event " + event + "after 2s");
+                        } else if (deviceInfo.getTrackingDeviceId() == null) {
+                            shouldDeferProcessingEvent = true;
+                            config.getLogger().debug(config.getAccountId(),
+                                    "Tracking Device Id not loaded yet, re-queuing event " + event + "after 2s");
+                        }
+                    }
+                }
+                if (shouldDeferProcessingEvent) {
+                    mainLooperHandler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            queueEvent(context,event,eventType);
+                        }
+                    }, 2000);
+                } else {
+                    if (eventType == Constants.FETCH_EVENT) {
+                        addToQueue(context, event, eventType);
+                    } else {
+                        sessionManager.lazyCreateSession(context);
+                        pushInitialEventsAsync();
+                        addToQueue(context, event, eventType);
+                    }
+                }
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public void scheduleQueueFlush(final Context context) {
+        if (commsRunnable == null) {
+            commsRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    flushQueueAsync(context, EventGroup.REGULAR);
+                    flushQueueAsync(context, EventGroup.PUSH_NOTIFICATION_VIEWED);
+                }
+            };
+        }
+        // Cancel any outstanding send runnables, and issue a new delayed one
+        mainLooperHandler.removeCallbacks(commsRunnable);
+
+        mainLooperHandler.postDelayed(commsRunnable, networkManager.getDelayFrequency());
+
+        logger.verbose(config.getAccountId(), "Scheduling delayed queue flush on main event loop");
+    }
+
+    /**
+     * Attaches meta info about the current state of the device to an event.
+     * Typically, this meta is added only to the ping event.
+     */
+    private void attachMeta(final JSONObject o, final Context context) {
+        // Memory consumption
+        try {
+            o.put("mc", Utils.getMemoryConsumption());
+        } catch (Throwable t) {
+            // Ignore
+        }
+
+        // Attach the network type
+        try {
+            o.put("nt", Utils.getCurrentNetworkType(context));
+        } catch (Throwable t) {
+            // Ignore
+        }
+    }
+
+    //Session
+    private void attachPackageNameIfRequired(final Context context, final JSONObject event) {
+        try {
+            final String type = event.getString("type");
+            // Send it only for app launched events
+            if ("event".equals(type) && Constants.APP_LAUNCHED_EVENT.equals(event.getString("evtName"))) {
+                event.put("pai", context.getPackageName());
+            }
+        } catch (Throwable t) {
+            // Ignore
+        }
+    }
+
+    private String getCleverTapID() {
+        return deviceInfo.getDeviceID();
+    }
+
+    private void schedulePushNotificationViewedQueueFlush(final Context context) {
+        if (pushNotificationViewedRunnable == null) {
+            pushNotificationViewedRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    config.getLogger()
+                        .verbose(config.getAccountId(),
+                            "Pushing Notification Viewed event onto queue flush async");
+                    flushQueueAsync(context, EventGroup.PUSH_NOTIFICATION_VIEWED);
+                }
+            };
+        }
+        mainLooperHandler.removeCallbacks(pushNotificationViewedRunnable);
+        mainLooperHandler.post(pushNotificationViewedRunnable);
+    }
+
+    @Override
+    public void setCommonEventData(Map<String, Object> data) {
+        commonEventData = data;
+        JSONObject jsonObject = new JSONObject(data);
+        String commonEventDataStr = jsonObject.toString();
+        StorageHelper.putString(context,"commonEventData",commonEventDataStr);
+    }
+
+    //Util
+    // only call async
+    private void updateLocalStore(final Context context, final JSONObject event, final int type) {
+        if (type == Constants.RAISED_EVENT) {
+            localDataStore.persistEvent(context, event, type);
+        }
+    }
+
+}

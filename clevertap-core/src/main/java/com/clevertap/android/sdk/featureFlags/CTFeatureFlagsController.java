@@ -3,41 +3,69 @@ package com.clevertap.android.sdk.featureFlags;
 import static com.clevertap.android.sdk.product_config.CTProductConfigConstants.PRODUCT_CONFIG_JSON_KEY_FOR_KEY;
 import static com.clevertap.android.sdk.product_config.CTProductConfigConstants.PRODUCT_CONFIG_JSON_KEY_FOR_VALUE;
 
-import android.content.Context;
 import android.text.TextUtils;
+import com.clevertap.android.sdk.BaseAnalyticsManager;
+import com.clevertap.android.sdk.BaseCallbackManager;
 import com.clevertap.android.sdk.CleverTapInstanceConfig;
 import com.clevertap.android.sdk.Constants;
-import com.clevertap.android.sdk.FileUtils;
 import com.clevertap.android.sdk.Logger;
-import com.clevertap.android.sdk.TaskManager;
-import com.clevertap.android.sdk.Utils;
-import java.lang.ref.WeakReference;
+import com.clevertap.android.sdk.task.CTExecutorFactory;
+import com.clevertap.android.sdk.task.OnSuccessListener;
+import com.clevertap.android.sdk.task.Task;
+import com.clevertap.android.sdk.utils.FileUtils;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Callable;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+/**
+ * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+ *      Note: This class has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+ * </p>
+ */
+@Deprecated
 public class CTFeatureFlagsController {
 
-    private final CleverTapInstanceConfig config;
+    final CleverTapInstanceConfig config;
 
-    private String guid;
+    /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
+     */
+    @Deprecated
+    public String getGuid() {
+        return guid;
+    }
 
-    private boolean isInitialized = false;
+    String guid;
 
-    private final WeakReference<FeatureFlagListener> listenerWeakReference;
+    boolean isInitialized = false;
 
-    private final Context mContext;
+    final BaseAnalyticsManager mAnalyticsManager;
 
-    private HashMap<String, Boolean> store;
+    final BaseCallbackManager mCallbackManager;
 
-    public CTFeatureFlagsController(Context context, String guid, CleverTapInstanceConfig config,
-            FeatureFlagListener listener) {
+    FileUtils mFileUtils;
+
+    private final Map<String, Boolean> store = Collections.synchronizedMap(new HashMap<String, Boolean>());
+
+    /**
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
+     */
+    @Deprecated
+    CTFeatureFlagsController(String guid, CleverTapInstanceConfig config,
+            BaseCallbackManager callbackManager, BaseAnalyticsManager analyticsManager, FileUtils fileUtils) {
         this.guid = guid;
         this.config = config;
-        this.store = new HashMap<>();
-        listenerWeakReference = new WeakReference<>(listener);
-        this.mContext = context.getApplicationContext();
+        mCallbackManager = callbackManager;
+        mAnalyticsManager = analyticsManager;
+        mFileUtils = fileUtils;
         init();
     }
 
@@ -48,22 +76,25 @@ public class CTFeatureFlagsController {
     /**
      * This method is internal to the CleverTap SDK.
      * Developers should not use this method
+     *
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
      */
+    @Deprecated
     public void fetchFeatureFlags() {
-        if (listenerWeakReference != null && listenerWeakReference.get() != null) {
-            Utils.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        if (listenerWeakReference.get() != null) {
-                            listenerWeakReference.get().fetchFeatureFlags();
-                        }
-                    } catch (Exception e) {
-                        getConfigLogger().verbose(getLogTag(), e.getLocalizedMessage());
-                    }
+        Task<Void> task = CTExecutorFactory.executors(config).mainTask();
+        task.execute("fetchFeatureFlags", new Callable<Void>() {
+            @Override
+            public Void call() {
+                try {
+                    mAnalyticsManager.fetchFeatureFlags();
+                } catch (Exception e) {
+                    getConfigLogger().verbose(getLogTag(), e.getLocalizedMessage());
                 }
-            });
-        }
+                return null;
+            }
+        });
     }
 
     /**
@@ -72,7 +103,12 @@ public class CTFeatureFlagsController {
      * @param key          - Key of the Feature flag
      * @param defaultValue - default value of the Key, in case we don't find any Feature Flag with the Key.
      * @return boolean- Value of the Feature flag.
+
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
      */
+    @Deprecated
     public Boolean get(String key, boolean defaultValue) {
         if (!isInitialized) {
             getConfigLogger()
@@ -83,7 +119,7 @@ public class CTFeatureFlagsController {
                 "Getting feature flag with key - " + key + " and default value - " + defaultValue);
         Boolean value = store.get(key);
         if (value != null) {
-            return store.get(key);
+            return value;
         } else {
             getConfigLogger()
                     .verbose(getLogTag(), "Feature flag not found, returning default value - " + defaultValue);
@@ -99,7 +135,12 @@ public class CTFeatureFlagsController {
      * Method to check Feature Flag has been initialized
      *
      * @return boolean- true if initialized, else false.
+
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
      */
+    @Deprecated
     public boolean isInitialized() {
         return isInitialized;
     }
@@ -107,7 +148,13 @@ public class CTFeatureFlagsController {
     /**
      * This method is internal to the CleverTap SDK.
      * Developers should not use this method
+
+
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
      */
+    @Deprecated
     public void resetWithGuid(String guid) {
         this.guid = guid;
         init();
@@ -116,8 +163,15 @@ public class CTFeatureFlagsController {
     /**
      * This method is internal to the CleverTap SDK.
      * Developers should not use this method
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
      */
+    @Deprecated
     public void setGuidAndInit(String cleverTapID) {
+        if (isInitialized) {
+            return;
+        }
         this.guid = cleverTapID;
         init();
     }
@@ -125,8 +179,12 @@ public class CTFeatureFlagsController {
     /**
      * This method is internal to the CleverTap SDK.
      * Developers should not use this method
+     * <p style="color:#4d2e00;background:#ffcc99;font-weight: bold" >
+     *      Note: This method has been deprecated since v5.0.0 and will be removed in the future versions of this SDK.
+     * </p>
      */
-    public void updateFeatureFlags(JSONObject jsonObject) throws JSONException {
+    @Deprecated
+    public synchronized void updateFeatureFlags(JSONObject jsonObject) throws JSONException {
 
         JSONArray featureFlagList = jsonObject.getJSONArray(Constants.KEY_KV);
         try {
@@ -142,11 +200,78 @@ public class CTFeatureFlagsController {
         notifyFeatureFlagUpdate();
     }
 
+    String getCachedDirName() {
+        return CTFeatureFlagConstants.DIR_FEATURE_FLAG + "_" + config.getAccountId() + "_" + guid;
+    }
+
+    String getCachedFileName() {
+        return CTFeatureFlagConstants.CACHED_FILE_NAME;
+    }
+
+    String getCachedFullPath() {
+        return getCachedDirName() + "/" + getCachedFileName();
+    }
+
+    void init() {
+        if (TextUtils.isEmpty(guid)) {
+            return;
+        }
+        Task<Boolean> task = CTExecutorFactory.executors(config).ioTask();
+        task.addOnSuccessListener(new OnSuccessListener<Boolean>() {
+            @Override
+            public void onSuccess(final Boolean init) {
+                isInitialized = init;
+            }
+        });
+        task.execute("initFeatureFlags", new Callable<Boolean>() {
+            @Override
+            public Boolean call() {
+                synchronized (this) {
+                    getConfigLogger().verbose(getLogTag(), "Feature flags init is called");
+                    String fileName = getCachedFullPath();
+                    try {
+                        store.clear();
+                        String content = mFileUtils.readFromFile(fileName);
+                        if (!TextUtils.isEmpty(content)) {
+
+                            JSONObject jsonObject = new JSONObject(content);
+                            JSONArray kvArray = jsonObject.getJSONArray(Constants.KEY_KV);
+
+                            if (kvArray != null && kvArray.length() > 0) {
+                                for (int i = 0; i < kvArray.length(); i++) {
+                                    JSONObject object = (JSONObject) kvArray.get(i);
+                                    if (object != null) {
+
+                                        String Key = object.getString(PRODUCT_CONFIG_JSON_KEY_FOR_KEY);
+                                        String Value = object.getString(PRODUCT_CONFIG_JSON_KEY_FOR_VALUE);
+                                        if (!TextUtils.isEmpty(Key)) {
+                                            store.put(Key, Boolean.parseBoolean(Value));
+                                        }
+                                    }
+                                }
+                            }
+                            getConfigLogger().verbose(getLogTag(), "Feature flags initialized from file " + fileName +
+                                    " with configs  " + store);
+                        } else {
+                            getConfigLogger().verbose(getLogTag(), "Feature flags file is empty-" + fileName);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        getConfigLogger().verbose(getLogTag(),
+                                "UnArchiveData failed file- " + fileName + " " + e.getLocalizedMessage());
+                        return false;
+                    }
+                    return true;
+                }
+            }
+        });
+    }
+
     private synchronized void archiveData(JSONObject featureFlagRespObj) {
 
         if (featureFlagRespObj != null) {
             try {
-                FileUtils.writeJsonToFile(mContext, config, getCachedDirName(), getCachedFileName(),
+                mFileUtils.writeJsonToFile(getCachedDirName(), getCachedFileName(),
                         featureFlagRespObj);
                 getConfigLogger()
                         .verbose(getLogTag(), "Feature flags saved into file-[" + getCachedFullPath() + "]" + store);
@@ -157,18 +282,6 @@ public class CTFeatureFlagsController {
         }
     }
 
-    private String getCachedDirName() {
-        return CTFeatureFlagConstants.DIR_FEATURE_FLAG + "_" + config.getAccountId() + "_" + guid;
-    }
-
-    private String getCachedFileName() {
-        return CTFeatureFlagConstants.CACHED_FILE_NAME;
-    }
-
-    private String getCachedFullPath() {
-        return getCachedDirName() + "/" + getCachedFileName();
-    }
-
     private Logger getConfigLogger() {
         return config.getLogger();
     }
@@ -177,71 +290,20 @@ public class CTFeatureFlagsController {
         return config.getAccountId() + "[Feature Flag]";
     }
 
-    private synchronized void init() {
-        if (TextUtils.isEmpty(guid)) {
-            return;
-        }
-        TaskManager.getInstance().execute(new TaskManager.TaskListener<Void, Boolean>() {
-            @Override
-            public Boolean doInBackground(Void aVoid) {
-                getConfigLogger().verbose(getLogTag(), "Feature flags init is called");
-                String fileName = getCachedFullPath();
-                try {
-                    store.clear();
-                    String content = FileUtils.readFromFile(mContext, config, fileName);
-                    if (!TextUtils.isEmpty(content)) {
-
-                        JSONObject jsonObject = new JSONObject(content);
-                        JSONArray kvArray = jsonObject.getJSONArray(Constants.KEY_KV);
-
-                        if (kvArray != null && kvArray.length() > 0) {
-                            for (int i = 0; i < kvArray.length(); i++) {
-                                JSONObject object = (JSONObject) kvArray.get(i);
-                                if (object != null) {
-
-                                    String Key = object.getString(PRODUCT_CONFIG_JSON_KEY_FOR_KEY);
-                                    String Value = object.getString(PRODUCT_CONFIG_JSON_KEY_FOR_VALUE);
-                                    if (!TextUtils.isEmpty(Key)) {
-                                        store.put(Key, Boolean.parseBoolean(Value));
-                                    }
-                                }
-                            }
-                        }
-                        getConfigLogger().verbose(getLogTag(), "Feature flags initialized from file " + fileName +
-                                " with configs  " + store);
-                        isInitialized = true;
-                    } else {
-                        getConfigLogger().verbose(getLogTag(), "Feature flags file is empty-" + fileName);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    getConfigLogger().verbose(getLogTag(),
-                            "UnArchiveData failed file- " + fileName + " " + e.getLocalizedMessage());
-                    return false;
-                }
-                return true;
-            }
-
-            @Override
-            public void onPostExecute(Boolean aBoolean) {
-
-            }
-        });
-
-    }
-
     private void notifyFeatureFlagUpdate() {
-        if (listenerWeakReference != null && listenerWeakReference.get() != null) {
-            Utils.runOnUiThread(new Runnable() {
+        if (mCallbackManager.getFeatureFlagListener() != null) {
+            Task<Void> task = CTExecutorFactory.executors(config).mainTask();
+            task.execute("notifyFeatureFlagUpdate", new Callable<Void>() {
                 @Override
-                public void run() {
+                public Void call() {
                     try {
-                        if (listenerWeakReference.get() != null) {
-                            listenerWeakReference.get().featureFlagsDidUpdate();
+                        if (mCallbackManager.getFeatureFlagListener() != null) {
+                            mCallbackManager.getFeatureFlagListener().featureFlagsUpdated();
                         }
                     } catch (Exception e) {
                         getConfigLogger().verbose(getLogTag(), e.getLocalizedMessage());
                     }
+                    return null;
                 }
             });
         }
