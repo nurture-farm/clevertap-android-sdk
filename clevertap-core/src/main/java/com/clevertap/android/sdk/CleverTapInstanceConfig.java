@@ -316,6 +316,10 @@ public class CleverTapInstanceConfig implements Parcelable {
         return debugLevel;
     }
 
+    public String getProxyDomain() {
+        return proxyDomain;
+    }
+
     public void setProxyDomain(String proxyDomain) {
         this.proxyDomain = proxyDomain;
     }
