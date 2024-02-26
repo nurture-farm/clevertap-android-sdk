@@ -84,6 +84,8 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                 profileUpdate["MyStuffList"] = arrayListOf("bag", "shoes") //ArrayList of Strings
                 profileUpdate["MyStuffArray"] = arrayOf("Jeans", "Perfume")
 
+                profileUpdate["Identity"] = 1234 // Add user Identity
+
                 cleverTapAPI?.pushProfile(profileUpdate)
             }
             "1-1" -> {
@@ -96,6 +98,8 @@ class HomeScreenViewModel(private val cleverTapAPI: CleverTapAPI?) : ViewModel()
                 profileUpdate["Education"] = "College" // Can be either Graduate, College or School
                 profileUpdate["Married"] = "N" // Can be either Y or N
                 profileUpdate["MSG-push"] = false // Disable push notifications
+
+                profileUpdate["Identity"] = 1234 // Add user Identity
 
                 cleverTapAPI?.pushProfile(profileUpdate)
             }

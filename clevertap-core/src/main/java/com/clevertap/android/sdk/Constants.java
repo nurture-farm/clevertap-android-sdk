@@ -47,6 +47,7 @@ public interface Constants {
     String LABEL_INTENT_SERVICE = "CLEVERTAP_INTENT_SERVICE";
     String LABEL_XIAOMI_APP_KEY = "CLEVERTAP_XIAOMI_APP_KEY";
     String LABEL_XIAOMI_APP_ID = "CLEVERTAP_XIAOMI_APP_ID";
+    String LABEL_USER_TYPE = "CLEVERTAP_USER_TYPE";
     String LABEL_ENCRYPTION_LEVEL = "CLEVERTAP_ENCRYPTION_LEVEL";
     String LABEL_DEFAULT_CHANNEL_ID = "CLEVERTAP_DEFAULT_CHANNEL_ID";
     String FCM_FALLBACK_NOTIFICATION_CHANNEL_ID = "fcm_fallback_notification_channel";
@@ -251,6 +252,13 @@ public interface Constants {
     String GUID_PREFIX_GOOGLE_AD_ID = "__g";
     String CUSTOM_CLEVERTAP_ID_PREFIX = "__h";
     String ERROR_PROFILE_PREFIX = "__i";
+    // valid profile identifier keys
+    Set<String> PROFILE_IDENTIFIER_KEYS = new HashSet<>(Arrays.asList(
+            "Identity", "Email", "FBID", "GPID"));
+    String KEY_IDENTIFIER = "Identity";
+    String KEY_USER_TYPE = "userType";
+    String KEY_USER_ID = "userId";
+    String KEY_DEVICE_ID = "deviceId";
     String KEY_ICON = "icon";
     String KEY_POSTER_URL = "poster";
     String KEY_ACTION = "action";
