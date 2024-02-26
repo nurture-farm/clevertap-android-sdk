@@ -134,12 +134,10 @@ public class CleverTapInstanceConfig implements Parcelable {
     }
 
     private
-    CleverTapInstanceConfig(Context context, String accountId, String accountToken,
-                                    String proxyDomain, String accountRegion, boolean isDefault) {
+    CleverTapInstanceConfig(Context context, String accountId, String accountToken, String accountRegion, boolean isDefault) {
         this.accountId = accountId;
         this.accountToken = accountToken;
         this.accountRegion = accountRegion;
-        this.proxyDomain = proxyDomain;
         this.isDefaultInstance = isDefault;
         this.analyticsOnly = false;
         this.personalization = true;
@@ -518,8 +516,8 @@ public class CleverTapInstanceConfig implements Parcelable {
     // convenience to construct the internal only default config
     @SuppressWarnings({"unused", "WeakerAccess"})
     protected static CleverTapInstanceConfig createDefaultInstance(Context context, @NonNull String accountId,
-            @NonNull String accountToken, @NonNull String proxyDomain, String accountRegion) {
-        return new CleverTapInstanceConfig(context, accountId, accountToken, proxyDomain, accountRegion, true);
+                                                                   @NonNull String accountToken, String accountRegion) {
+        return new CleverTapInstanceConfig(context, accountId, accountToken, accountRegion, true);
     }
 
     // for internal use only!
