@@ -295,11 +295,6 @@ public class CleverTapInstanceConfig implements Parcelable {
     }
 
     @SuppressWarnings({"unused"})
-    public String getProxyDomain() {
-        return proxyDomain;
-    }
-
-    @SuppressWarnings({"unused"})
     public String getUserType() { return userType; }
     @SuppressWarnings({"unused"})
     public String getAccountToken() {
