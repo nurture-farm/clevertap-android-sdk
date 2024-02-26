@@ -197,10 +197,6 @@ public class ManifestInfo {
         return accountRegion;
     }
 
-    String getProxyDomain() {
-        return proxyDomain;
-    }
-
     String getAcountToken() {
         return accountToken;
     }
@@ -242,9 +238,6 @@ public class ManifestInfo {
         return useADID;
     }
 
-    String getUserType() { return userType; }
-
-    static void changeCredentials(String id, String token, String region, String proxy) {
     boolean isUseCustomDeviceId() {
         return useCustomDeviceId;
     }
@@ -260,7 +253,6 @@ public class ManifestInfo {
         accountId = id;
         accountToken = token;
         accountRegion = region;
-        proxyDomain = proxy;
     }
 
     static void changeCredentials(String id, String token, String _proxyDomain, String _spikyProxyDomain) {
