@@ -169,26 +169,6 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     }
 
     /**
-     * This method is used to change the credentials of CleverTap account Id, token and region programmatically
-     * Once the SDK is initialized with a default instance, subsequent calls to this method will be ignored.
-     *
-     * @param accountID CleverTap Account Id
-     * @param token     CleverTap Account Token
-     * @param region    Clever Tap Account Region
-     */
-    @SuppressWarnings({"unused", "WeakerAccess"})
-    public static void changeCredentials(String accountID, String token, String region, String proxy) {
-        if (defaultConfig != null) {
-            Logger.i("CleverTap SDK already initialized with accountID:" + defaultConfig.getAccountId()
-                    + " and token:" + defaultConfig.getAccountToken() + ". Cannot change credentials to "
-                    + accountID + " and " + token);
-            return;
-        }
-
-        ManifestInfo.changeCredentials(accountID, token, region, proxy);
-    }
-
-    /**
      * This method is used to change the credentials of CleverTap account Id, token, proxyDomain and spikyProxyDomain programmatically
      *
      * @param accountID         CleverTap Account Id
@@ -1339,7 +1319,7 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
     }
 
     private String getProxyDomain() {
-        return config.getProxyDomain();
+        return coreState.getConfig().getProxyDomain();
     }
 
     /**
@@ -2845,39 +2825,6 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
 
     private int getCurrentSession() {
         return currentSessionId;
-    }
-
-    //gives delay frequency based on region
-    //randomly adds delay to 1s delay in case of non-EU regions
-    private int getDelayFrequency() {
-        getConfigLogger().debug(getAccountId(), "Network retry #" + networkRetryCount);
-
-        //Retry with delay as 1s for first 10 retries
-        if (networkRetryCount < 10) {
-            getConfigLogger().debug(getAccountId(),
-                    "Failure count is " + networkRetryCount + ". Setting delay frequency to 1s");
-            minDelayFrequency = Constants.PUSH_DELAY_MS; //reset minimum delay to 1s
-            return minDelayFrequency;
-        }
-
-        if (config.getAccountRegion() == null) {
-            //Retry with delay as 1s if region is null in case of eu1
-            getConfigLogger().debug(getAccountId(), "Setting delay frequency to 1s");
-            return Constants.PUSH_DELAY_MS;
-        } else {
-            //Retry with delay as minimum delay frequency and add random number of seconds to scatter traffic
-            Random randomGen = new Random();
-            int randomDelay = (randomGen.nextInt(10) + 1) * 1000;
-            minDelayFrequency += randomDelay;
-            if (minDelayFrequency < maxDelayFrequency) {
-                getConfigLogger().debug(getAccountId(), "Setting delay frequency to " + minDelayFrequency);
-                return minDelayFrequency;
-            } else {
-                minDelayFrequency = Constants.PUSH_DELAY_MS;
-            }
-            getConfigLogger().debug(getAccountId(), "Setting delay frequency to " + minDelayFrequency);
-            return minDelayFrequency;
-        }
     }
 
     private String getDomain(boolean defaultToHandshakeURL, final EventGroup eventGroup) {
@@ -4759,16 +4706,6 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
             }
         }
 
-    }
-
-    /**
-     * Returns whether or not the app is in the foreground.
-     *
-     * @return The foreground status
-     */
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    static boolean isAppForeground() {
-        return appForeground;
     }
 
     /**

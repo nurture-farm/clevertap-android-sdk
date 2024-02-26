@@ -275,11 +275,6 @@ public class CleverTapInstanceConfig implements Parcelable {
         userType = in.readString();
     }
 
-    @NonNull
-    public ArrayList<String> getAllowedPushTypes() {
-        return allowedPushTypes;
-    }
-
     @Override
     public int describeContents() {
         return 0;
@@ -319,10 +314,6 @@ public class CleverTapInstanceConfig implements Parcelable {
     @SuppressWarnings({"unused", "WeakerAccess"})
     public int getDebugLevel() {
         return debugLevel;
-    }
-
-    public String getProxyDomain() {
-        return proxyDomain;
     }
 
     public void setProxyDomain(String proxyDomain) {

@@ -8,6 +8,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Set;
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
 public interface Constants {
@@ -47,7 +48,6 @@ public interface Constants {
     String LABEL_INTENT_SERVICE = "CLEVERTAP_INTENT_SERVICE";
     String LABEL_XIAOMI_APP_KEY = "CLEVERTAP_XIAOMI_APP_KEY";
     String LABEL_XIAOMI_APP_ID = "CLEVERTAP_XIAOMI_APP_ID";
-    String LABEL_USER_TYPE = "CLEVERTAP_USER_TYPE";
     String LABEL_ENCRYPTION_LEVEL = "CLEVERTAP_ENCRYPTION_LEVEL";
     String LABEL_DEFAULT_CHANNEL_ID = "CLEVERTAP_DEFAULT_CHANNEL_ID";
     String FCM_FALLBACK_NOTIFICATION_CHANNEL_ID = "fcm_fallback_notification_channel";
@@ -253,8 +253,7 @@ public interface Constants {
     String CUSTOM_CLEVERTAP_ID_PREFIX = "__h";
     String ERROR_PROFILE_PREFIX = "__i";
     // valid profile identifier keys
-    Set<String> PROFILE_IDENTIFIER_KEYS = new HashSet<>(Arrays.asList(
-            "Identity", "Email", "FBID", "GPID"));
+    Set<String> PROFILE_IDENTIFIER_KEYS = new HashSet<>(Arrays.asList("Identity", "Email", "FBID", "GPID"));
     String KEY_IDENTIFIER = "Identity";
     String KEY_USER_TYPE = "userType";
     String KEY_USER_ID = "userId";
