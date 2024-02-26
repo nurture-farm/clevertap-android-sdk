@@ -86,6 +86,29 @@ public class CleverTapInstanceConfig implements Parcelable {
 
     private String userType;
 
+    @SuppressWarnings("unused")
+    public static CleverTapInstanceConfig createInstance(Context context, @NonNull String accountId,
+                                                         @NonNull String accountToken) {
+
+        //noinspection ConstantConditions
+        if (accountId == null || accountToken == null) {
+            Logger.i("CleverTap accountId and accountToken cannot be null");
+            return null;
+        }
+        return new CleverTapInstanceConfig(context, accountId, accountToken, null, false);
+    }
+
+    @SuppressWarnings({"unused"})
+    public static CleverTapInstanceConfig createInstance(Context context, @NonNull String accountId,
+                                                         @NonNull String accountToken, String accountRegion) {
+        //noinspection ConstantConditions
+        if (accountId == null || accountToken == null) {
+            Logger.i("CleverTap accountId and accountToken cannot be null");
+            return null;
+        }
+        return new CleverTapInstanceConfig(context, accountId, accountToken, accountRegion, false);
+    }
+
     CleverTapInstanceConfig(CleverTapInstanceConfig config) {
         this.accountId = config.accountId;
         this.accountToken = config.accountToken;
