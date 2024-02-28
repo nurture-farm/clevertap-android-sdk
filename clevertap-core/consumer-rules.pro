@@ -7,7 +7,7 @@
 -keep class com.google.android.exoplayer2.ExoPlayer{*;}
 -keep class com.google.android.exoplayer2.source.hls.HlsMediaSource{*;}
 -keep class com.google.android.exoplayer2.ui.StyledPlayerView{*;}
--keep class com.google.android.gms.ads.identifier.AdvertisingIdClient{*;}
+-keep class com.google.android.gms.ads.**{*;}
 -keep class com.google.android.gms.common.GooglePlayServicesUtil{*;}
 -keepnames class * implements android.os.Parcelable {
     public static final ** CREATOR;

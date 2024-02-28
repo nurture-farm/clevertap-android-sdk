@@ -3,6 +3,7 @@ package com.clevertap.android.sdk.login;
 import android.content.Context;
 import com.clevertap.android.sdk.AnalyticsManager;
 import com.clevertap.android.sdk.BaseCallbackManager;
+import com.clevertap.android.sdk.CTEventNotifier;
 import com.clevertap.android.sdk.CTLockManager;
 import com.clevertap.android.sdk.CleverTapInstanceConfig;
 import com.clevertap.android.sdk.Constants;
@@ -330,6 +331,46 @@ public class LoginController {
         if (controllerManager.getCtVariables() != null) {
             controllerManager.getCtVariables().clearUserContent();
         }
+    }
+
+    public void clearData(final String cleverTapID, final CTEventNotifier eventNotifier) {
+        Task<Void> task = CTExecutorFactory.executors(config).postAsyncSafelyTask();
+        task.execute("clearData",new Callable<Void>() {
+            @Override
+            public Void call() {
+                try {
+                    config.getLogger().verbose(config.getAccountId(), "asyncProfileSwitchUser:[cleverTapID " + cleverTapID);
+                    //set optOut to false on the current user to unregister the device token
+                    coreMetaData.setCurrentUserOptedOut(false);
+                    // unregister the device token on the current user
+                    pushProviders.forcePushDeviceToken(false);
+
+                    // try and flush and then reset the queues
+                    baseEventQueueManager.flushQueueSync(context, EventGroup.REGULAR);
+                    baseEventQueueManager.flushQueueSync(context, EventGroup.PUSH_NOTIFICATION_VIEWED);
+                    dbManager.clearQueues(context);
+
+                    // clear out the old data
+                    localDataStore.changeUser();
+                    deviceInfo.setCurrentUserOptOutStateFromStorage();
+                    pushProviders.forcePushDeviceToken(true);
+                    synchronized (processingUserLoginLock) {
+                        processingUserLoginIdentifier = null;
+                    }
+                    resetInbox();
+                    resetFeatureFlags();
+                    resetProductConfigs();
+                    recordDeviceIDErrors();
+                    resetDisplayUnits();
+                    controllerManager.getInAppFCManager().changeUser(deviceInfo.getDeviceID());
+                    eventNotifier.onEventComplete();
+                } catch (Throwable t) {
+                    config.getLogger().verbose(config.getAccountId(), "Reset Profile error", t);
+                    eventNotifier.onEventCompleteWithError(t);
+                }
+                return null;
+            }
+        });
     }
 
 }

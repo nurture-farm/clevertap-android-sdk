@@ -54,6 +54,12 @@ public class ManifestInfo {
 
     private static int encryptionLevel;
 
+    private static String userType;
+
+    private static String eventPortalDomain;
+
+    private static boolean useCustomDeviceId;
+
     public synchronized static ManifestInfo getInstance(Context context) {
         if (instance == null) {
             instance = new ManifestInfo(context);
@@ -88,6 +94,9 @@ public class ManifestInfo {
         if (spikyProxyDomain == null) {
             spikyProxyDomain = _getManifestStringValueForKey(metaData, Constants.LABEL_SPIKY_PROXY_DOMAIN);
         }
+        eventPortalDomain = _getManifestStringValueForKey(metaData, Constants.LABEL_EVENT_PORTAL_DOMAIN);
+        userType = _getManifestStringValueForKey(metaData, Constants.LABEL_USER_TYPE);
+        useCustomDeviceId = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_USE_CUSTOM_DEVICE_ID));
         notificationIcon = _getManifestStringValueForKey(metaData, Constants.LABEL_NOTIFICATION_ICON);
         useADID = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_USE_GOOGLE_AD_ID));
         appLaunchedDisabled = "1".equals(_getManifestStringValueForKey(metaData, Constants.LABEL_DISABLE_APP_LAUNCH));
@@ -252,6 +261,19 @@ public class ManifestInfo {
         ManifestInfo.xiaomiAppID = xiaomiAppID;
         ManifestInfo.xiaomiAppKey = xiaomiAppKey;
     }
+
+    public String getEventPortalDomain() {
+        return eventPortalDomain;
+    }
+
+    public String getUserType() {
+        return userType;
+    }
+
+    boolean isUseCustomDeviceId() {
+        return useCustomDeviceId;
+    }
+
 
     /**
      * This returns string representation of int,boolean,string,float value of given key

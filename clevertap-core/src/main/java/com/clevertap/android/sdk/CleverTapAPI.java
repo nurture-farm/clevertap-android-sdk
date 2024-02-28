@@ -746,6 +746,7 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
         debugLevel = level;
     }
 
+
     /**
      * Enables or disables debugging. If enabled, see debug messages in Android's logcat utility.
      * Debug messages are tagged as CleverTap.
@@ -3507,4 +3508,26 @@ public class CleverTapAPI implements CTInboxActivity.InboxActivityListener {
             impl.cleanupAllImages();
         }
     }
+
+
+    public void setCommonEventData(Map<String, Object> data) {
+        coreState.getBaseEventQueueManager().setCommonEventData(data);
+    }
+
+    public void resetUser(CTEventNotifier eventNotifier) {
+        coreState.getLoginController().clearData(getCleverTapID(),eventNotifier);
+    }
+
+    public void deferClevertapEventsUntilProfileAndDeviceIsFetched(boolean value) {
+        coreState.getBaseEventQueueManager().deferClevertapEventsUntilProfileAndDeviceIsFetched(value);
+    }
+
+    public void setTrackingDeviceId(String trackingDeviceId) {
+        coreState.getDeviceInfo().setTrackingDeviceId(trackingDeviceId);
+    }
+
+    public void setTrackingEnabled(boolean trackingEnabled) {
+        coreState.getDeviceInfo().setTrackingEnabled(trackingEnabled);
+    }
+
 }
