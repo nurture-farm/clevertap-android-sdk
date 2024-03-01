@@ -120,7 +120,7 @@ dependencies {
     implementation("com.android.installreferrer:installreferrer:2.2")
     // Mandatory for v3.6.4 and above
 
-    implementation("androidx.multidex:multidex:2.0.1")
+    implementation(libs.androidx.multidex)
 
     // Import the BoM for the Firebase platform
     implementation platform("com.google.firebase:firebase-bom:30.0.2")

@@ -36,4 +36,5 @@ dependencies {
     compileOnly (libs.androidx.annotation)
     testImplementation project(':test_shared')
     testImplementation fileTree('libs')
+    implementation(libs.androidx.multidex)
 }

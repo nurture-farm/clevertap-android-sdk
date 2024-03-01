@@ -60,4 +60,5 @@ dependencies {
     androidTestImplementation (libs.test.runner)
     androidTestImplementation (libs.test.rules)
     androidTestImplementation (libs.test.espresso.core)
+    implementation(libs.androidx.multidex)
 }

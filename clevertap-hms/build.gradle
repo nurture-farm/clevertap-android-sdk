@@ -37,4 +37,5 @@ dependencies {
 
     testImplementation project(':test_shared')
     testImplementation (libs.huawei.push)
+    implementation(libs.androidx.multidex)
 }
