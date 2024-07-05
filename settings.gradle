@@ -3,7 +3,6 @@ plugins {
 }
 include ':test_shared'
 include ':clevertap-core'
-include ':sample'
 include ':clevertap-geofence'
 include ':clevertap-hms'
 include ':clevertap-pushtemplates'
