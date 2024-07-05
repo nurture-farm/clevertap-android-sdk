@@ -38,7 +38,6 @@ dependencies {
     implementation (libs.huawei.push)
     compileOnly (libs.androidx.annotation)
 
-    testImplementation project(':test_shared')
     testImplementation (libs.huawei.push)
     implementation(libs.androidx.multidex)
 }

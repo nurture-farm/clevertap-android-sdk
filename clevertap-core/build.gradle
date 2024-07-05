@@ -51,7 +51,6 @@ dependencies {
     implementation(libs.androidx.work.runtime)
 
     // Unit testing dependencies
-    testImplementation(project(":test_shared"))
     testImplementation(libs.firebase.messaging)
     testImplementation(libs.test.mockk)
     testImplementation(libs.test.coroutines)
