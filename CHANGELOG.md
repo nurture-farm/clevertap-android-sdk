@@ -2,7 +2,7 @@
 
 ### February 27, 2024
 
-* [CleverTap Android SDK v6.1.1](docs/CTCORECHANGELOG.md)
+* [CleverTap Android SDK v6.1.2](docs/CTCORECHANGELOG.md)
 
 ### February 21, 2024
 
