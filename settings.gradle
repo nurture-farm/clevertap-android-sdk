@@ -2,9 +2,6 @@ plugins {
     id "com.gradle.enterprise" version "3.6.3"
 }
 include ':clevertap-core'
-include ':clevertap-geofence'
-include ':clevertap-hms'
-include ':clevertap-pushtemplates'
 
 gradleEnterprise {
     buildScan {
@@ -12,4 +9,3 @@ gradleEnterprise {
         termsOfServiceAgree = "yes"
     }
 }
-include ':instantapp'
