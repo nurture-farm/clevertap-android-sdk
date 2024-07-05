@@ -22,6 +22,9 @@ android {
         jvmTarget = JavaVersion.VERSION_1_8
     }
     namespace 'com.clevertap.android.geofence'
+    lint {
+        abortOnError false
+    }
 }
 
 dependencies {

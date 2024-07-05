@@ -32,3 +32,7 @@
 -keep class com.huawei.updatesdk.**{*;}
 -keep class com.huawei.hms.**{*;}
 -keep class com.clevertap.demo.ExampleVariables {*;}
+-dontwarn com.xiaomi.channel.commonutils.android.Region
+-dontwarn com.xiaomi.mipush.sdk.MiPushClient
+-dontwarn com.xiaomi.mipush.sdk.MiPushMessage
+-dontwarn com.xiaomi.mipush.sdk.PushMessageReceiver
