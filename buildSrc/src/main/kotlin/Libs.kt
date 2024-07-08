@@ -177,8 +177,8 @@ object Libs {
 object Android {
 
     // Android SDK
-    const val compileSdkVersionVal = 31
-    const val targetSdkVersionVal = 31
+    const val compileSdkVersionVal = 34
+    const val targetSdkVersionVal = 34
     const val buildToolsVersionVal = "30.0.3"
     const val minSdkVersionVal = 16
 }
