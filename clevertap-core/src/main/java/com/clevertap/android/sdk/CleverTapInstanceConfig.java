@@ -101,6 +101,19 @@ public class CleverTapInstanceConfig implements Parcelable {
 
     @SuppressWarnings("unused")
     public static CleverTapInstanceConfig createInstance(Context context, @NonNull String accountId,
+            @NonNull String accountToken) {
+
+        //noinspection ConstantConditions
+        if (accountId == null || accountToken == null) {
+            Logger.i("CleverTap accountId and accountToken cannot be null");
+            return null;
+        }
+        return new CleverTapInstanceConfig(context, accountId, accountToken, null, null, false);
+    }
+
+    @SuppressWarnings("unused")
+    public static CleverTapInstanceConfig createInstance(
+            Context context, @NonNull String accountId,
             @NonNull String accountToken, @NonNull String proxyDomain) {
         //noinspection ConstantConditions
         if (accountId == null || accountToken == null) {

@@ -4,6 +4,7 @@ import static com.google.android.exoplayer2.ui.PlayerView.SHOW_BUFFERING_WHEN_PL
 
 import android.annotation.SuppressLint;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -30,17 +31,20 @@ import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
 import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.source.hls.HlsMediaSource;
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.google.android.exoplayer2.trackselection.ExoTrackSelection;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
 import com.google.android.exoplayer2.trackselection.TrackSelector;
-import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.google.android.exoplayer2.upstream.BandwidthMeter;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter;
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
+import com.google.android.exoplayer2.upstream.DefaultDataSource;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.google.android.exoplayer2.upstream.TransferListener;
 import com.google.android.exoplayer2.util.Util;
 import java.util.ArrayList;
@@ -57,9 +61,9 @@ public class CTInAppNativeInterstitialFragment extends CTInAppBaseFullNativeFrag
 
     private GifImageView gifImageView;
 
-    private SimpleExoPlayer player;
+    private ExoPlayer player;
 
-    private PlayerView playerView;
+    private StyledPlayerView playerView;
 
     private RelativeLayout relativeLayout;
 
@@ -345,7 +349,7 @@ public class CTInAppNativeInterstitialFragment extends CTInAppBaseFullNativeFrag
         videoFrameLayout = relativeLayout.findViewById(R.id.video_frame);
         videoFrameLayout.setVisibility(View.VISIBLE);
 
-        playerView = new PlayerView(this.context);
+        playerView = new StyledPlayerView(this.context);
         fullScreenIcon = new ImageView(this.context);
         fullScreenIcon.setImageDrawable(
                 ResourcesCompat.getDrawable(this.context.getResources(), R.drawable.ct_ic_fullscreen_expand, null));
@@ -399,7 +403,7 @@ public class CTInAppNativeInterstitialFragment extends CTInAppBaseFullNativeFrag
             layoutParams.setMargins(0, iconTop, iconRight, 0);
             fullScreenIcon.setLayoutParams(layoutParams);
         }
-        playerView.setShowBuffering(SHOW_BUFFERING_WHEN_PLAYING);
+        playerView.setShowBuffering(StyledPlayerView.SHOW_BUFFERING_WHEN_PLAYING);
         playerView.setUseArtwork(true);
         playerView.setControllerAutoShow(false);
         videoFrameLayout.addView(playerView);
@@ -409,20 +413,23 @@ public class CTInAppNativeInterstitialFragment extends CTInAppBaseFullNativeFrag
 
         // 1. Create a default TrackSelector
         BandwidthMeter bandwidthMeter = new DefaultBandwidthMeter.Builder(this.context).build();
-        TrackSelection.Factory videoTrackSelectionFactory = new AdaptiveTrackSelection.Factory();
+        ExoTrackSelection.Factory videoTrackSelectionFactory = new AdaptiveTrackSelection.Factory();
         TrackSelector trackSelector = new DefaultTrackSelector(this.context,
                 videoTrackSelectionFactory);
         // 2. Create the player
-        player = new SimpleExoPlayer.Builder(this.context).setTrackSelector(trackSelector).build();
+        player = new ExoPlayer.Builder(this.context).setTrackSelector(trackSelector).build();
         // 3. Produces DataSource instances through which media data is loaded.
-        DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(this.context,
-                Util.getUserAgent(this.context, this.context.getApplicationContext().getPackageName()),
-                (TransferListener) bandwidthMeter);
-        HlsMediaSource hlsMediaSource;
-        hlsMediaSource = new HlsMediaSource.Factory(dataSourceFactory)
-                .createMediaSource(Uri.parse(inAppNotification.getMediaList().get(0).getMediaUrl()));
+        Context ctx = this.context;
+        String userAgent = Util.getUserAgent(ctx,ctx.getPackageName());
+        String url = inAppNotification.getMediaList().get(0).getMediaUrl();
+        TransferListener listener = bandwidthMeter.getTransferListener();
+        DefaultHttpDataSource.Factory  dsf = new DefaultHttpDataSource.Factory().setUserAgent(userAgent).setTransferListener(listener);
+        DataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(ctx,dsf);
+        MediaItem mediaItem = MediaItem.fromUri(url);
+        HlsMediaSource hlsMediaSource = new HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem);
+        player.setMediaSource(hlsMediaSource);
         // 4. Prepare the player with the source.
-        player.prepare(hlsMediaSource);
+        player.prepare();
         player.setRepeatMode(Player.REPEAT_MODE_ONE);
         player.seekTo(mediaPosition);
     }

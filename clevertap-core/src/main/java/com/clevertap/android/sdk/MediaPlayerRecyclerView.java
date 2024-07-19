@@ -16,27 +16,28 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.google.android.exoplayer2.trackselection.ExoTrackSelection;
 import com.google.android.exoplayer2.trackselection.TrackSelection;
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
 import com.google.android.exoplayer2.trackselection.TrackSelector;
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
-import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.ui.StyledPlayerView;
 
 @SuppressWarnings("unused")
 public class MediaPlayerRecyclerView extends RecyclerView {
 
-    SimpleExoPlayer player;
+    ExoPlayer player;
 
     private Context appContext;
 
     private CTInboxBaseMessageViewHolder playingHolder;
 
     //surface view for playing video
-    private PlayerView videoSurfaceView;
+    private StyledPlayerView videoSurfaceView;
 
     /**
      * {@inheritDoc}
@@ -171,7 +172,7 @@ public class MediaPlayerRecyclerView extends RecyclerView {
 
     private void initialize(Context context) {
         appContext = context.getApplicationContext();
-        videoSurfaceView = new PlayerView(appContext);
+        videoSurfaceView = new StyledPlayerView(appContext);
         videoSurfaceView.setBackgroundColor(Color.TRANSPARENT);
         if (CTInboxActivity.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             videoSurfaceView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
@@ -182,12 +183,12 @@ public class MediaPlayerRecyclerView extends RecyclerView {
         Drawable artwork = ResourcesCompat.getDrawable(context.getResources(), R.drawable.ct_audio, null);
         videoSurfaceView.setDefaultArtwork(artwork);
 
-        TrackSelection.Factory videoTrackSelectionFactory =
+        ExoTrackSelection.Factory videoTrackSelectionFactory =
                 new AdaptiveTrackSelection.Factory();
         TrackSelector trackSelector =
                 new DefaultTrackSelector(appContext, videoTrackSelectionFactory);
 
-        player = new SimpleExoPlayer.Builder(context).setTrackSelector(trackSelector).build();
+        player = new ExoPlayer.Builder(context).setTrackSelector(trackSelector).build();
         player.setVolume(0f); // start off muted
         videoSurfaceView.setUseController(true);
         videoSurfaceView.setControllerAutoShow(false);
@@ -220,21 +221,9 @@ public class MediaPlayerRecyclerView extends RecyclerView {
                 }
             }
         });
-        player.addListener(new Player.EventListener() {
+        player.addListener(new Player.Listener() {
             @Override
-            public void onLoadingChanged(boolean isLoading) {
-            }
-
-            @Override
-            public void onPlaybackParametersChanged(PlaybackParameters playbackParameters) {
-            }
-
-            @Override
-            public void onPlayerError(ExoPlaybackException error) {
-            }
-
-            @Override
-            public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+            public void onPlaybackStateChanged(final int playbackState) {
                 switch (playbackState) {
                     case Player.STATE_BUFFERING:
                         if (playingHolder != null) {
@@ -259,26 +248,6 @@ public class MediaPlayerRecyclerView extends RecyclerView {
                     default:
                         break;
                 }
-            }
-
-            @Override
-            public void onPositionDiscontinuity(int reason) {
-            }
-
-            @Override
-            public void onRepeatModeChanged(int repeatMode) {
-            }
-
-            @Override
-            public void onSeekProcessed() {
-            }
-
-            @Override
-            public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
-            }
-
-            @Override
-            public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {
             }
         });
     }
