@@ -6,15 +6,17 @@ buildscript {
 
     repositories {
         google()// Google's Maven repository
-        jcenter()
-        maven { url 'http://developer.huawei.com/repo/' }
         mavenCentral()
+        gradlePluginPortal()
+        maven {
+            url 'https://developer.huawei.com/repo/'
+        }
     }
     dependencies {
         classpath "com.android.tools.build:gradle:$gradlePluginVersion"
         classpath "com.google.gms:google-services:$googleServicesPluginVersion"// Google Services plugin
-        classpath "com.github.dcendents:android-maven-gradle-plugin:$mavenPluginVersion"
-        classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:$bintrayPluginVersion"
+//        classpath "com.github.dcendents:android-maven-gradle-plugin:$mavenPluginVersion"
+//        classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:$bintrayPluginVersion"
         classpath "com.huawei.agconnect:agcp:$huaweiPluginVersion"// Huawei Push Plugin
         classpath "org.jacoco:org.jacoco.core:$jacocoVersion"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
@@ -23,9 +25,12 @@ buildscript {
 
 allprojects {
     repositories {
-        jcenter()
         google()
-        maven { url 'http://developer.huawei.com/repo/' }
+        mavenCentral()
+        gradlePluginPortal()
+        maven {
+            url 'https://developer.huawei.com/repo/'
+        }
         flatDir {
             dirs 'libs'
         }
@@ -38,7 +43,7 @@ task clean(type: Delete) {
 
 task copyTemplates {
     outputs.upToDateWhen { false }
-    doLast{
+    doLast {
         copy {
             from 'templates/README.md'
             into "."
